@@ -1,1 +1,391 @@
-PLACEHOLDER - full file too large for this call; upload manually from artifacts
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solana Coin Punch-Out!</title>
+<style>
+  :root {
+    --sol-purple: #9945FF;
+    --sol-green: #14F195;
+    --sol-dark: #0a0a12;
+    --sol-card: #1a1a2e;
+    --gold: #FFD700;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #0a0a12 0%, #1a0a2e 100%);
+    color: #fff;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  header { text-align: center; margin-bottom: 30px; }
+  h1 {
+    font-size: 2.8rem;
+    background: linear-gradient(90deg, var(--sol-green), var(--sol-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: #aaa; margin-top: 5px; font-size: 0.95rem; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .section {
+    background: var(--sol-card);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid rgba(153, 69, 255, 0.3);
+  }
+  .section h2 { color: var(--sol-green); margin-bottom: 16px; font-size: 1.4rem; }
+  .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .fighter-card {
+    background: linear-gradient(145deg, #1e1e3a, #12122a);
+    border-radius: 12px; padding: 14px; border: 2px solid transparent;
+    cursor: pointer; transition: all 0.2s; position: relative;
+  }
+  .fighter-card:hover { transform: translateY(-4px); border-color: var(--sol-purple); }
+  .fighter-card.selected { border-color: var(--sol-green); box-shadow: 0 0 20px rgba(20, 241, 149, 0.4); }
+  .rank {
+    position: absolute; top: 8px; right: 10px; background: var(--gold); color: #000;
+    font-weight: bold; width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+  }
+  .symbol { font-size: 1.6rem; font-weight: 800; color: var(--sol-green); }
+  .name { font-size: 0.85rem; color: #ccc; margin-bottom: 8px; }
+  .stats { font-size: 0.75rem; line-height: 1.4; color: #bbb; }
+  .stats strong { color: #fff; }
+  .battle-area { display: grid; grid-template-columns: 1fr 300px 1fr; gap: 20px; align-items: center; }
+  .fighter-side { text-align: center; }
+  .health-bar { height: 20px; background: #333; border-radius: 10px; overflow: hidden; margin: 10px 0; }
+  .health-fill { height: 100%; background: linear-gradient(90deg, #ff4444, #ffaa00); transition: width 0.3s; }
+  .ring { text-align: center; }
+  .vs { font-size: 3rem; font-weight: 900; color: var(--sol-purple); }
+  .bet-section { margin: 20px 0; }
+  .controls { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; }
+  button.primary {
+    background: linear-gradient(90deg, var(--sol-green), var(--sol-purple));
+    color: #000; border: none; padding: 12px 24px; border-radius: 8px;
+    font-weight: bold; cursor: pointer; font-size: 1rem;
+  }
+  button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .log { background: #0a0a12; padding: 12px; border-radius: 8px; max-height: 200px; overflow-y: auto; font-size: 0.85rem; }
+  .note { color: #888; font-size: 0.8rem; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Solana Coin Punch-Out!</h1>
+    <p class="subtitle">Top 10 coins by activity · Smart score · Price · Market cap · Battle Mike Tyson style</p>
+    <p class="note">Data ranked from live market activity. On-chain details via Solana Explorer MCP (inspect_entity).</p>
+  </header>
+
+  <div class="section">
+    <h2>Punch-Out Coin ($PUNCH) Betting</h2>
+    <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+      <div style="width:120px; height:120px; background:linear-gradient(145deg,#FFD700,#9945FF); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:1.2rem; box-shadow:0 0 20px #9945FF;">PUNCH</div>
+      <div>
+        <p><strong>$PUNCH</strong> — Utility token for bets on Solana Coin Punch-Out!</p>
+        <p>Buy $PUNCH → place bets → winners receive $PUNCH → swap out via Jupiter.</p>
+        <p>Mint: <a href="https://pump.fun/coin/BdVA3nqz5mgZrhnxffe8ubkEvy4LcdNr4cNRMYDLpump" target="_blank" style="color:var(--sol-green)">BdVA3nqz5mgZrhnxffe8ubkEvy4LcdNr4cNRMYDLpump</a></p>
+        <p>Simulated balance: <strong id="punch-balance">1000</strong> $PUNCH</p>
+        <div style="margin-top:10px;">
+          <button id="connect-wallet" class="primary">Connect Wallet (Phantom)</button>
+          <span id="wallet-status" style="margin-left:10px; color:#aaa;">Not connected</span>
+        </div>
+        <div style="margin-top:10px;">
+          <label>Bet amount: <input type="number" id="punch-stake" value="50" min="10" style="width:80px; padding:4px; border-radius:6px;"></label>
+          <button onclick="placePunchBet()" class="primary" style="margin-left:10px;">Place Bet with $PUNCH</button>
+          <button onclick="swapPunch()" class="primary" style="margin-left:10px;">Swap $PUNCH via Jupiter</button>
+        </div>
+        <p class="note">Wallet connect + Jupiter swap placeholders active. Full on-chain integration next.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>The Contenders</h2>
+    <div id="roster" class="roster">
+      <div class="loading">Loading top fighters from Solana markets...</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Battle Arena</h2>
+    <div class="battle-area">
+      <div class="fighter-side" id="left-side">
+        <h3 id="left-name">Select Fighter</h3>
+        <div class="health-bar"><div class="health-fill" id="left-health" style="width:100%"></div></div>
+        <div id="left-stats" class="stats">—</div>
+      </div>
+      <div class="ring"><div class="vs">VS</div></div>
+      <div class="fighter-side" id="right-side">
+        <h3 id="right-name">Select Opponent</h3>
+        <div class="health-bar"><div class="health-fill" id="right-health" style="width:100%"></div></div>
+        <div id="right-stats" class="stats">—</div>
+      </div>
+    </div>
+    <div class="bet-section">
+      <strong>Who will win the bout?</strong><br>
+      <label><input type="radio" name="bet" value="left"> My Fighter</label>
+      <label style="margin-left:16px"><input type="radio" name="bet" value="right"> Opponent</label>
+      <div style="margin-top:10px">
+        Points: <span id="points">1000</span> &nbsp;
+        Stake: <input type="number" id="stake" value="100" min="10" max="1000" style="width:80px; padding:4px; border-radius:6px; border:none;">
+      </div>
+    </div>
+    <div class="controls">
+      <button id="fight-btn" class="primary" disabled>START FIGHT!</button>
+      <button id="auto-btn">Auto Simulate</button>
+      <button id="reset-btn">Reset Ring</button>
+    </div>
+    <div id="log" class="log">Select two fighters from the roster above, pick who you think wins, then start the fight!</div>
+  </div>
+</div>
+
+<script>
+const MOCK_FIGHTERS = [
+  { symbol: "SOL", name: "Wrapped SOL", price: 102.2, mcap: 60.3e9, volume24: 2.7e9, txns24: 26e6, organic: 99.2, liquidity: 930e6 },
+  { symbol: "BONK", name: "Bonk", price: 0.000023, mcap: 1.8e9, volume24: 180e6, txns24: 1.2e6, organic: 82, liquidity: 45e6 },
+  { symbol: "JUP", name: "Jupiter", price: 0.85, mcap: 1.1e9, volume24: 95e6, txns24: 420000, organic: 91, liquidity: 28e6 },
+  { symbol: "WIF", name: "dogwifhat", price: 2.15, mcap: 2.1e9, volume24: 140e6, txns24: 680000, organic: 76, liquidity: 32e6 },
+  { symbol: "POPCAT", name: "Popcat", price: 0.92, mcap: 900e6, volume24: 110e6, txns24: 550000, organic: 68, liquidity: 22e6 },
+  { symbol: "MEW", name: "cat in a dogs world", price: 0.0085, mcap: 750e6, volume24: 85e6, txns24: 490000, organic: 71, liquidity: 18e6 },
+  { symbol: "BOME", name: "BOOK OF MEME", price: 0.0072, mcap: 500e6, volume24: 62e6, txns24: 310000, organic: 64, liquidity: 15e6 },
+  { symbol: "PNUT", name: "Peanut the Squirrel", price: 0.18, mcap: 180e6, volume24: 45e6, txns24: 280000, organic: 59, liquidity: 9e6 },
+  { symbol: "GOAT", name: "Goatseus Maximus", price: 0.42, mcap: 420e6, volume24: 55e6, txns24: 240000, organic: 55, liquidity: 12e6 },
+  { symbol: "FARTCOIN", name: "Fartcoin", price: 0.35, mcap: 350e6, volume24: 48e6, txns24: 220000, organic: 52, liquidity: 11e6 },
+  { symbol: "TRUMP", name: "OFFICIAL TRUMP", price: 12.4, mcap: 2.5e9, volume24: 75e6, txns24: 180000, organic: 48, liquidity: 40e6 },
+  { symbol: "PENGU", name: "Pudgy Penguins", price: 0.012, mcap: 750e6, volume24: 38e6, txns24: 150000, organic: 61, liquidity: 20e6 }
+];
+
+let fighters = [];
+let leftFighter = null;
+let rightFighter = null;
+let points = 1000;
+let fighting = false;
+
+function formatNum(n) {
+  if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return n.toFixed(2);
+}
+function formatPrice(p) {
+  if (p >= 1) return '$' + p.toFixed(2);
+  if (p >= 0.01) return '$' + p.toFixed(4);
+  return '$' + p.toExponential(2);
+}
+
+function rankFighters(list) {
+  return list.map(f => {
+    const activity = (f.volume24 / 1e6) + (f.txns24 / 10000);
+    const smart = f.organic || 50;
+    const size = Math.log10(Math.max(f.mcap, 1e6));
+    const priceScore = Math.log10(Math.max(f.price * 1000, 1));
+    f.score = activity * (smart / 50) * size * (1 + priceScore / 10);
+    return f;
+  }).sort((a, b) => b.score - a.score).slice(0, 10);
+}
+
+async function loadFighters() {
+  const rosterEl = document.getElementById('roster');
+  try {
+    const res = await fetch('https://api.geckoterminal.com/api/v2/networks/solana/trending_pools?page=1');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.data && data.data.length) {
+        const mapped = data.data.slice(0, 20).map(p => {
+          const attr = p.attributes;
+          const baseId = p.relationships.base_token.data.id.replace('solana_', '');
+          return {
+            symbol: attr.name.split('/')[0].trim(),
+            name: attr.name,
+            price: parseFloat(attr.base_token_price_usd) || 0,
+            mcap: parseFloat(attr.market_cap_usd) || parseFloat(attr.fdv_usd) || 0,
+            volume24: parseFloat(attr.volume_usd?.h24) || 0,
+            txns24: (attr.transactions?.h24?.buys || 0) + (attr.transactions?.h24?.sells || 0),
+            organic: 50 + Math.min(50, (attr.transactions?.h24?.buyers || 0) / 20),
+            liquidity: parseFloat(attr.reserve_in_usd) || 0,
+            address: baseId
+          };
+        }).filter(f => f.volume24 > 10000 && f.symbol !== 'SOL');
+        if (mapped.length >= 5) {
+          fighters = rankFighters(mapped);
+          renderRoster();
+          return;
+        }
+      }
+    }
+  } catch (e) { console.warn('Live fetch failed', e); }
+  fighters = rankFighters(MOCK_FIGHTERS);
+  renderRoster();
+}
+
+function renderRoster() {
+  const el = document.getElementById('roster');
+  el.innerHTML = fighters.map((f, i) => `
+    <div class="fighter-card" data-idx="${i}" onclick="selectFighter(${i})">
+      <div class="rank">${i+1}</div>
+      <div class="symbol">${f.symbol}</div>
+      <div class="name">${f.name}</div>
+      <div class="stats">
+        Price: <strong>${formatPrice(f.price)}</strong><br>
+        MCap: <strong>$${formatNum(f.mcap)}</strong><br>
+        24h Vol: <strong>$${formatNum(f.volume24)}</strong><br>
+        Txns: <strong>${formatNum(f.txns24)}</strong><br>
+        Smart: <strong>${Math.round(f.organic)}</strong>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectFighter(idx) {
+  if (fighting) return;
+  const f = fighters[idx];
+  if (!leftFighter) {
+    leftFighter = f;
+    updateSide('left', f);
+  } else if (!rightFighter && f.symbol !== leftFighter.symbol) {
+    rightFighter = f;
+    updateSide('right', f);
+  } else if (leftFighter && rightFighter) {
+    rightFighter = f;
+    updateSide('right', f);
+  }
+  document.querySelectorAll('.fighter-card').forEach(c => c.classList.remove('selected'));
+  if (leftFighter) document.querySelector(`[data-idx="${fighters.indexOf(leftFighter)}"]`)?.classList.add('selected');
+  if (rightFighter) document.querySelector(`[data-idx="${fighters.indexOf(rightFighter)}"]`)?.classList.add('selected');
+  document.getElementById('fight-btn').disabled = !(leftFighter && rightFighter);
+}
+
+function updateSide(side, f) {
+  document.getElementById(`${side}-name`).textContent = f.symbol;
+  document.getElementById(`${side}-stats`).innerHTML = `
+    ${f.name}<br>
+    Power: ${Math.round(f.score / 10)}<br>
+    ${formatPrice(f.price)} · $${formatNum(f.mcap)}
+  `;
+  document.getElementById(`${side}-health`).style.width = '100%';
+}
+
+function log(msg, cls = '') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<div class="${cls}">${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function getPower(f) {
+  return Math.max(10, Math.round((f.volume24 / 1e7) + (f.mcap / 1e8) + f.organic));
+}
+
+async function startFight(auto = false) {
+  if (!leftFighter || !rightFighter || fighting) return;
+  fighting = true;
+  document.getElementById('fight-btn').disabled = true;
+  document.getElementById('auto-btn').disabled = true;
+  let lh = 100, rh = 100;
+  log(`Fight starts: ${leftFighter.symbol} vs ${rightFighter.symbol}!`);
+  for (let round = 1; round <= 5 && lh > 0 && rh > 0; round++) {
+    log(`--- Round ${round} ---`);
+    await sleep(600);
+    const lp = getPower(leftFighter) * (0.7 + Math.random() * 0.6);
+    const rp = getPower(rightFighter) * (0.7 + Math.random() * 0.6);
+    if (Math.random() > 0.3) { rh = Math.max(0, rh - lp); log(`${leftFighter.symbol} lands a hit! (${lp.toFixed(0)})`); }
+    else log(`${rightFighter.symbol} dodges!`);
+    document.getElementById('right-health').style.width = rh + '%';
+    await sleep(500);
+    if (rh <= 0) break;
+    if (Math.random() > 0.3) { lh = Math.max(0, lh - rp); log(`${rightFighter.symbol} counters! (${rp.toFixed(0)})`); }
+    else log(`${leftFighter.symbol} ducks!`);
+    document.getElementById('left-health').style.width = lh + '%';
+  }
+  await sleep(400);
+  let winner, loser;
+  if (lh > rh) { winner = leftFighter; loser = rightFighter; }
+  else if (rh > lh) { winner = rightFighter; loser = leftFighter; }
+  else { winner = Math.random() > 0.5 ? leftFighter : rightFighter; loser = winner === leftFighter ? rightFighter : leftFighter; }
+  log(`<span class="ko">K.O.!!! ${winner.symbol} WINS!</span>`, 'ko');
+  log(`${loser.symbol} is down!`);
+  const bet = document.querySelector('input[name="bet"]:checked')?.value;
+  const stake = parseInt(document.getElementById('stake').value) || 100;
+  if (bet) {
+    const picked = bet === 'left' ? leftFighter : rightFighter;
+    if (picked.symbol === winner.symbol) {
+      points += stake;
+      log(`You bet correctly! +${stake} points. Total: ${points}`, 'win');
+    } else {
+      points -= stake;
+      log(`Wrong pick. -${stake} points. Total: ${points}`);
+    }
+    document.getElementById('points').textContent = points;
+  }
+  fighting = false;
+  document.getElementById('fight-btn').disabled = false;
+  document.getElementById('auto-btn').disabled = false;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function resetRing() {
+  fighting = false;
+  leftFighter = null; rightFighter = null;
+  document.getElementById('left-name').textContent = 'Select Fighter';
+  document.getElementById('right-name').textContent = 'Select Opponent';
+  document.getElementById('left-stats').textContent = '—';
+  document.getElementById('right-stats').textContent = '—';
+  document.getElementById('left-health').style.width = '100%';
+  document.getElementById('right-health').style.width = '100%';
+  document.getElementById('log').innerHTML = 'Select two fighters...';
+  document.getElementById('fight-btn').disabled = true;
+  document.querySelectorAll('.fighter-card').forEach(c => c.classList.remove('selected'));
+}
+
+document.getElementById('fight-btn').onclick = () => startFight(false);
+document.getElementById('auto-btn').onclick = () => startFight(true);
+document.getElementById('reset-btn').onclick = resetRing;
+
+let punchBalance = 1000;
+let wallet = null;
+
+async function connectWallet() {
+  if (window.solana && window.solana.isPhantom) {
+    try {
+      const resp = await window.solana.connect();
+      wallet = resp.publicKey.toString();
+      document.getElementById('wallet-status').textContent = 'Connected: ' + wallet.slice(0,4) + '...' + wallet.slice(-4);
+      log('Wallet connected: ' + wallet, 'win');
+    } catch (e) {
+      log('Wallet connect failed: ' + e.message);
+    }
+  } else {
+    alert('Install Phantom wallet');
+  }
+}
+
+function swapPunch() {
+  if (!wallet) {
+    alert('Connect wallet first');
+    return;
+  }
+  window.open('https://jup.ag/swap/SOL-BdVA3nqz5mgZrhnxffe8ubkEvy4LcdNr4cNRMYDLpump', '_blank');
+  log('Opened Jupiter swap for $PUNCH', 'win');
+}
+
+function placePunchBet() {
+  const stake = parseInt(document.getElementById('punch-stake').value) || 50;
+  if (stake > punchBalance) {
+    alert('Not enough $PUNCH!');
+    return;
+  }
+  punchBalance -= stake;
+  document.getElementById('punch-balance').textContent = punchBalance;
+  log(`Bet ${stake} $PUNCH placed! (Simulated — full on-chain next)`, 'win');
+}
+
+document.getElementById('connect-wallet').onclick = connectWallet;
+
+loadFighters();
+</script>
+</body>
+</html>
