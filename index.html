@@ -1,1 +1,524 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solana Coin Punch-Out!</title>
+<style>
+  :root {
+    --sol-purple: #9945FF;
+    --sol-green: #14F195;
+    --sol-dark: #0a0a12;
+    --sol-card: #1a1a2e;
+    --gold: #FFD700;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #0a0a12 0%, #1a0a2e 100%);
+    color: #fff;
+    min-height: 100vh;
+    padding: 16px;
+  }
+  header { text-align: center; margin-bottom: 16px; }
+  h1 {
+    font-size: 2.2rem;
+    background: linear-gradient(90deg, var(--sol-green), var(--sol-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: #aaa; margin-top: 4px; font-size: 0.85rem; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .section {
+    background: var(--sol-card);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 14px;
+    border: 1px solid rgba(153, 69, 255, 0.3);
+  }
+  .section h2 { color: var(--sol-green); margin-bottom: 10px; font-size: 1.2rem; }
+  .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .fighter-card {
+    background: linear-gradient(145deg, #1e1e3a, #12122a);
+    border-radius: 12px; padding: 10px; border: 2px solid transparent;
+    cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .fighter-card:hover { transform: translateY(-2px); border-color: var(--sol-purple); }
+  .fighter-card.selected { border-color: var(--sol-green); box-shadow: 0 0 12px rgba(20, 241, 149, 0.4); }
+  .symbol { font-size: 1.2rem; font-weight: 800; color: var(--sol-green); }
+  .name { font-size: 0.75rem; color: #ccc; }
+  .style { font-size: 0.65rem; color: #888; margin-top: 2px; }
+  .battle-area {
+    display: grid; grid-template-columns: 1fr 380px 1fr; gap: 12px; align-items: start;
+  }
+  .fighter-side { text-align: center; }
+  .health-bar, .stamina-bar {
+    height: 16px; background: #222; border-radius: 8px; overflow: hidden;
+    margin: 4px 0; border: 1px solid #444;
+  }
+  .health-fill { height: 100%; background: linear-gradient(90deg, #ff3333, #ffaa00, #33ff33); width: 100%; transition: width 0.15s; }
+  .stamina-fill { height: 100%; background: linear-gradient(90deg, #3366ff, #66aaff); width: 100%; transition: width 0.15s; }
+  .ring-wrap { position: relative; }
+  #ring-canvas {
+    background: radial-gradient(circle, #2a1a4a, #0a0a12);
+    border: 5px solid var(--sol-purple);
+    border-radius: 12px;
+    width: 100%; height: 280px;
+    display: block;
+    box-shadow: 0 0 25px rgba(153, 69, 255, 0.4);
+  }
+  .vs { font-size: 1.6rem; font-weight: 900; color: var(--gold); text-align: center; margin: 4px 0; }
+  .round-info { font-size: 1rem; color: #ccc; text-align: center; }
+  .controls { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  button {
+    background: linear-gradient(90deg, var(--sol-purple), #6b21a8);
+    color: white; border: none; padding: 8px 14px;
+    border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.85rem;
+  }
+  button.primary { background: linear-gradient(90deg, var(--sol-green), #0d9a6a); color: #000; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .log {
+    background: #0a0a12; border-radius: 8px; padding: 8px;
+    max-height: 120px; overflow-y: auto; font-family: monospace;
+    font-size: 0.75rem; margin-top: 8px; border: 1px solid #333;
+  }
+  .controller-hint { font-size: 0.75rem; color: #aaa; margin-top: 6px; text-align: center; }
+  @media (max-width: 900px) {
+    .battle-area { grid-template-columns: 1fr; }
+    #ring-canvas { height: 220px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>SOLANA COIN PUNCH-OUT!</h1>
+    <p class="subtitle">Realistic boxing simulation. Historical legends battle with stats, stamina, and timing. Xbox controller supported.</p>
+  </header>
+
+  <div class="section">
+    <h2>Punch-Out Coin ($PUNCH) Betting</h2>
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <div style="width:80px; height:80px; background:linear-gradient(145deg,#FFD700,#9945FF); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.9rem; box-shadow:0 0 12px #9945FF;">PUNCH</div>
+      <div>
+        <p><strong>$PUNCH</strong> — Utility token for bets.</p>
+        <p>Mint: <a href="https://pump.fun/coin/BdVA3nqz5mgZrhnxffe8ubkEvy4LcdNr4cNRMYDLpump" target="_blank" style="color:var(--sol-green)">BdVA3nqz5mgZrhnxffe8ubkEvy4LcdNr4cNRMYDLpump</a></p>
+        <p>Simulated balance: <strong id="punch-balance">1000</strong> PUNCH</p>
+        <div style="margin-top:6px;">
+          <button id="connect-wallet" class="primary">Connect Wallet (Phantom)</button>
+          <span id="wallet-status" style="margin-left:6px; color:#aaa;">Not connected</span>
+        </div>
+        <div style="margin-top:6px;">
+          <label>Bet: <input type="number" id="punch-stake" value="50" min="10" style="width:60px; padding:3px; border-radius:6px;"></label>
+          <button onclick="placePunchBet()" class="primary" style="margin-left:6px;">Place Bet</button>
+          <button onclick="swapPunch()" class="primary" style="margin-left:6px;">Swap via Jupiter</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Choose Your Fighter</h2>
+    <div id="roster" class="roster"></div>
+  </div>
+
+  <div class="section">
+    <h2>The Ring</h2>
+    <div class="battle-area">
+      <div class="fighter-side">
+        <h3 id="left-name">Select Fighter</h3>
+        <div class="health-bar"><div class="health-fill" id="left-health" style="width:100%"></div></div>
+        <div class="stamina-bar"><div class="stamina-fill" id="left-stamina" style="width:100%"></div></div>
+        <div id="left-stats" class="stats">—</div>
+      </div>
+      <div class="ring-wrap">
+        <canvas id="ring-canvas" width="360" height="280"></canvas>
+        <div class="vs">VS</div>
+        <div class="round-info" id="round-info">Ready</div>
+        <div id="action-display" style="font-size:1.1rem; margin-top:4px; text-align:center;">—</div>
+      </div>
+      <div class="fighter-side">
+        <h3 id="right-name">Select Opponent</h3>
+        <div class="health-bar"><div class="health-fill" id="right-health" style="width:100%"></div></div>
+        <div class="stamina-bar"><div class="stamina-fill" id="right-stamina" style="width:100%"></div></div>
+        <div id="right-stats" class="stats">—</div>
+      </div>
+    </div>
+    <div class="controls">
+      <button id="fight-btn" class="primary" disabled>START FIGHT</button>
+      <button id="jab-btn">Jab</button>
+      <button id="cross-btn">Cross</button>
+      <button id="hook-btn">Hook</button>
+      <button id="upper-btn">Uppercut</button>
+      <button id="dodge-btn">Dodge</button>
+      <button id="block-btn">Block</button>
+      <button id="reset-btn">Reset</button>
+    </div>
+    <div class="controller-hint">Controller: A=Jab &nbsp; B=Cross &nbsp; X=Hook &nbsp; Y=Uppercut &nbsp; LB=Dodge &nbsp; RB=Block &nbsp; Keyboard: 1-4 punches, D dodge, S block</div>
+    <div id="log" class="log">Select two fighters, then start. Manage stamina — heavy punches cost more.</div>
+  </div>
+</div>
+
+<script>
+const FIGHTERS = [
+  { symbol: "TYSON", name: "Iron Mike Tyson", style: "Peek-a-boo / Power", power: 98, speed: 82, stamina: 75, chin: 80, technique: 70 },
+  { symbol: "ALI", name: "Muhammad Ali", style: "Float like a butterfly", power: 78, speed: 95, stamina: 88, chin: 85, technique: 92 },
+  { symbol: "FOREMAN", name: "George Foreman", style: "Heavy power", power: 96, speed: 65, stamina: 80, chin: 90, technique: 68 },
+  { symbol: "FRAZIER", name: "Joe Frazier", style: "Pressure hooks", power: 88, speed: 75, stamina: 85, chin: 92, technique: 78 },
+  { symbol: "MARCIANO", name: "Rocky Marciano", style: "Relentless", power: 90, speed: 70, stamina: 95, chin: 98, technique: 72 },
+  { symbol: "LEONARD", name: "Sugar Ray Leonard", style: "Speed & skill", power: 75, speed: 93, stamina: 82, chin: 78, technique: 95 },
+  { symbol: "HOLYFIELD", name: "Evander Holyfield", style: "Warrior", power: 85, speed: 78, stamina: 90, chin: 95, technique: 85 },
+  { symbol: "LOUIS", name: "Joe Louis", style: "Precision power", power: 92, speed: 72, stamina: 85, chin: 88, technique: 88 },
+  { symbol: "ROBINSON", name: "Sugar Ray Robinson", style: "The greatest", power: 82, speed: 90, stamina: 88, chin: 80, technique: 98 },
+  { symbol: "MAYWEATHER", name: "Floyd Mayweather", style: "Defensive master", power: 70, speed: 88, stamina: 85, chin: 75, technique: 99 }
+];
+
+let fighters = FIGHTERS;
+let leftFighter = null;
+let rightFighter = null;
+let leftHP = 100, rightHP = 100;
+let leftStamina = 100, rightStamina = 100;
+let fighting = false;
+let round = 1;
+let punchBalance = 1000;
+let wallet = null;
+let gamepadIndex = null;
+let lastButtons = {};
+let aiTimer = null;
+let canvas, ctx;
+
+function renderRoster() {
+  const el = document.getElementById('roster');
+  el.innerHTML = fighters.map((f, i) => `
+    <div class="fighter-card" data-idx="${i}" onclick="selectFighter(${i})">
+      <div class="symbol">${f.symbol}</div>
+      <div class="name">${f.name}</div>
+      <div class="style">${f.style}</div>
+    </div>
+  `).join('');
+}
+
+function selectFighter(idx) {
+  if (fighting) return;
+  const f = fighters[idx];
+  if (!leftFighter) {
+    leftFighter = f;
+    updateSide('left', f);
+  } else if (!rightFighter && f.symbol !== leftFighter.symbol) {
+    rightFighter = f;
+    updateSide('right', f);
+  } else if (leftFighter && rightFighter) {
+    rightFighter = f;
+    updateSide('right', f);
+  }
+  document.querySelectorAll('.fighter-card').forEach(c => c.classList.remove('selected'));
+  if (leftFighter) document.querySelector(`[data-idx="${fighters.indexOf(leftFighter)}"]`)?.classList.add('selected');
+  if (rightFighter) document.querySelector(`[data-idx="${fighters.indexOf(rightFighter)}"]`)?.classList.add('selected');
+  document.getElementById('fight-btn').disabled = !(leftFighter && rightFighter);
+  drawRing();
+}
+
+function updateSide(side, f) {
+  document.getElementById(`${side}-name`).textContent = f.symbol;
+  document.getElementById(`${side}-stats`).innerHTML = `${f.name}<br>P:${f.power} Sp:${f.speed} St:${f.stamina}<br>Chin:${f.chin} Tech:${f.technique}`;
+  document.getElementById(`${side}-health`).style.width = '100%';
+  document.getElementById(`${side}-stamina`).style.width = '100%';
+}
+
+function log(msg) {
+  const el = document.getElementById('log');
+  el.innerHTML += `<div>${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function startFight() {
+  if (!leftFighter || !rightFighter || fighting) return;
+  fighting = true;
+  leftHP = 100; rightHP = 100;
+  leftStamina = 100; rightStamina = 100;
+  round = 1;
+  document.getElementById('fight-btn').disabled = true;
+  document.getElementById('round-info').textContent = `Round ${round}`;
+  log(`Fight starts: ${leftFighter.symbol} vs ${rightFighter.symbol}!`);
+  playTone(440, 0.25);
+  aiLoop();
+  gameLoop();
+}
+
+function gameLoop() {
+  if (!fighting) return;
+  pollGamepad();
+  regenerateStamina();
+  if (leftHP <= 0 || rightHP <= 0) {
+    endFight();
+    return;
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+function regenerateStamina() {
+  if (leftStamina < 100) leftStamina = Math.min(100, leftStamina + 0.15);
+  if (rightStamina < 100) rightStamina = Math.min(100, rightStamina + 0.15);
+  document.getElementById('left-stamina').style.width = leftStamina + '%';
+  document.getElementById('right-stamina').style.width = rightStamina + '%';
+}
+
+function aiLoop() {
+  if (!fighting) return;
+  const delay = 800 + Math.random() * (1200 - rightFighter.speed * 5);
+  aiTimer = setTimeout(() => {
+    if (!fighting) return;
+    const actions = ['jab', 'cross', 'hook', 'upper', 'block', 'dodge'];
+    const weights = [0.3, 0.25, 0.2, 0.15, 0.05, 0.05];
+    let r = Math.random();
+    let acc = 0;
+    let action = 'jab';
+    for (let i = 0; i < actions.length; i++) {
+      acc += weights[i];
+      if (r < acc) { action = actions[i]; break; }
+    }
+    if (action === 'block') doBlock('right');
+    else if (action === 'dodge') doDodge('right');
+    else doPunch('right', action);
+    aiLoop();
+  }, delay);
+}
+
+function pollGamepad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  for (let i = 0; i < pads.length; i++) {
+    const pad = pads[i];
+    if (pad) {
+      gamepadIndex = i;
+      const btns = pad.buttons;
+      if (btns[0]?.pressed && !lastButtons[0]) doPunch('left', 'jab');
+      if (btns[1]?.pressed && !lastButtons[1]) doPunch('left', 'cross');
+      if (btns[2]?.pressed && !lastButtons[2]) doPunch('left', 'hook');
+      if (btns[3]?.pressed && !lastButtons[3]) doPunch('left', 'upper');
+      if (btns[4]?.pressed && !lastButtons[4]) doDodge('left');
+      if (btns[5]?.pressed && !lastButtons[5]) doBlock('left');
+      lastButtons[0] = btns[0]?.pressed;
+      lastButtons[1] = btns[1]?.pressed;
+      lastButtons[2] = btns[2]?.pressed;
+      lastButtons[3] = btns[3]?.pressed;
+      lastButtons[4] = btns[4]?.pressed;
+      lastButtons[5] = btns[5]?.pressed;
+    }
+  }
+}
+
+function getPunchCost(type) {
+  const costs = { jab: 4, cross: 8, hook: 10, upper: 12 };
+  return costs[type] || 6;
+}
+
+function getPunchMultiplier(type) {
+  const mult = { jab: 0.35, cross: 0.55, hook: 0.65, upper: 0.75 };
+  return mult[type] || 0.5;
+}
+
+function doPunch(side, type = 'cross') {
+  if (!fighting) return;
+  const attacker = side === 'left' ? leftFighter : rightFighter;
+  const defender = side === 'left' ? rightFighter : leftFighter;
+  let stamina = side === 'left' ? leftStamina : rightStamina;
+  const cost = getPunchCost(type);
+  if (stamina < cost) {
+    log(`${attacker.symbol} too tired for ${type}!`);
+    return;
+  }
+  if (side === 'left') leftStamina -= cost; else rightStamina -= cost;
+
+  const baseDmg = Math.round(attacker.power * getPunchMultiplier(type) * (0.7 + Math.random() * 0.5));
+  const blocked = Math.random() < 0.25;
+  const dmg = blocked ? Math.round(baseDmg * 0.3) : baseDmg;
+
+  if (side === 'left') {
+    rightHP = Math.max(0, rightHP - dmg);
+    document.getElementById('right-health').style.width = rightHP + '%';
+  } else {
+    leftHP = Math.max(0, leftHP - dmg);
+    document.getElementById('left-health').style.width = leftHP + '%';
+  }
+  document.getElementById('action-display').textContent = `${attacker.symbol} ${type.toUpperCase()}! -${dmg}${blocked ? ' (blocked)' : ''}`;
+  log(`${attacker.symbol} lands a ${type} for ${dmg}!`);
+  playTone(180 + Math.random() * 80, 0.12);
+  animatePunch(side, type);
+  if (leftHP <= 0 || rightHP <= 0) endFight();
+}
+
+function doDodge(side) {
+  if (!fighting) return;
+  const f = side === 'left' ? leftFighter : rightFighter;
+  document.getElementById('action-display').textContent = `${f.symbol} dodges!`;
+  log(`${f.symbol} slips a punch!`);
+  playTone(700, 0.07);
+}
+
+function doBlock(side) {
+  if (!fighting) return;
+  const f = side === 'left' ? leftFighter : rightFighter;
+  document.getElementById('action-display').textContent = `${f.symbol} blocks!`;
+  log(`${f.symbol} raises guard!`);
+  playTone(280, 0.08);
+}
+
+function animatePunch(side, type) {
+  drawRing(true, side, type);
+  setTimeout(() => drawRing(), 180);
+}
+
+function endFight() {
+  fighting = false;
+  if (aiTimer) clearTimeout(aiTimer);
+  const winner = leftHP > rightHP ? leftFighter : rightFighter;
+  const loser = leftHP > rightHP ? rightFighter : leftFighter;
+  document.getElementById('action-display').textContent = `${winner.symbol} WINS by KO!`;
+  log(`K.O.! ${winner.symbol} stops ${loser.symbol}!`);
+  playTone(880, 0.4);
+  document.getElementById('fight-btn').disabled = false;
+  document.getElementById('round-info').textContent = 'Fight Over';
+}
+
+function resetRing() {
+  fighting = false;
+  if (aiTimer) clearTimeout(aiTimer);
+  leftFighter = null; rightFighter = null;
+  leftHP = 100; rightHP = 100;
+  leftStamina = 100; rightStamina = 100;
+  document.getElementById('left-name').textContent = 'Select Fighter';
+  document.getElementById('right-name').textContent = 'Select Opponent';
+  document.getElementById('left-stats').textContent = '—';
+  document.getElementById('right-stats').textContent = '—';
+  document.getElementById('left-health').style.width = '100%';
+  document.getElementById('right-health').style.width = '100%';
+  document.getElementById('left-stamina').style.width = '100%';
+  document.getElementById('right-stamina').style.width = '100%';
+  document.getElementById('action-display').textContent = '—';
+  document.getElementById('round-info').textContent = 'Ready';
+  document.getElementById('log').innerHTML = 'Select two fighters...';
+  document.getElementById('fight-btn').disabled = true;
+  document.querySelectorAll('.fighter-card').forEach(c => c.classList.remove('selected'));
+  drawRing();
+}
+
+function playTone(freq, duration) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch (e) {}
+}
+
+function placePunchBet() {
+  const stake = parseInt(document.getElementById('punch-stake').value) || 50;
+  if (stake > punchBalance) { alert('Not enough PUNCH!'); return; }
+  punchBalance -= stake;
+  document.getElementById('punch-balance').textContent = punchBalance;
+  log(`Bet ${stake} PUNCH placed!`);
+}
+
+async function connectWallet() {
+  if (window.solana && window.solana.isPhantom) {
+    try {
+      const resp = await window.solana.connect();
+      wallet = resp.publicKey.toString();
+      document.getElementById('wallet-status').textContent = 'Connected: ' + wallet.slice(0,4) + '...' + wallet.slice(-4);
+      log('Wallet connected');
+    } catch (e) { log('Connect failed'); }
+  } else { alert('Install Phantom'); }
+}
+
+function swapPunch() {
+  if (!wallet) { alert('Connect wallet first'); return; }
+  window.open('https://jup.ag/swap/SOL-BdVA3nqz5mgZrhnxffe8ubkEvy4LcdNr4cNRMYDLpump', '_blank');
+}
+
+function drawRing(punching = false, side = null, type = null) {
+  if (!canvas || !ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#1a0a2e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#9945FF';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+  const leftX = 80, rightX = canvas.width - 80, y = 160;
+  drawBoxer(leftX, y, leftFighter ? leftFighter.symbol[0] : '?', '#14F195', punching && side === 'left');
+  drawBoxer(rightX, y, rightFighter ? rightFighter.symbol[0] : '?', '#9945FF', punching && side === 'right');
+
+  if (punching && type) {
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(type.toUpperCase() + '!', canvas.width / 2, 50);
+  }
+}
+
+function drawBoxer(x, y, initial, color, punching) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y - 40, 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(x - 12, y - 22, 24, 40);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  if (punching) {
+    ctx.moveTo(x - 15, y - 10);
+    ctx.lineTo(x - 40, y - 20);
+  } else {
+    ctx.moveTo(x - 15, y - 10);
+    ctx.lineTo(x - 30, y + 5);
+  }
+  ctx.stroke();
+  ctx.beginPath();
+  if (punching) {
+    ctx.moveTo(x + 15, y - 10);
+    ctx.lineTo(x + 40, y - 20);
+  } else {
+    ctx.moveTo(x + 15, y - 10);
+    ctx.lineTo(x + 30, y + 5);
+  }
+  ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(initial, x, y - 36);
+}
+
+document.getElementById('fight-btn').onclick = startFight;
+document.getElementById('jab-btn').onclick = () => doPunch('left', 'jab');
+document.getElementById('cross-btn').onclick = () => doPunch('left', 'cross');
+document.getElementById('hook-btn').onclick = () => doPunch('left', 'hook');
+document.getElementById('upper-btn').onclick = () => doPunch('left', 'upper');
+document.getElementById('dodge-btn').onclick = () => doDodge('left');
+document.getElementById('block-btn').onclick = () => doBlock('left');
+document.getElementById('reset-btn').onclick = resetRing;
+document.getElementById('connect-wallet').onclick = connectWallet;
+
+document.addEventListener('keydown', e => {
+  if (!fighting) return;
+  const k = e.key.toLowerCase();
+  if (k === '1') doPunch('left', 'jab');
+  if (k === '2') doPunch('left', 'cross');
+  if (k === '3') doPunch('left', 'hook');
+  if (k === '4') doPunch('left', 'upper');
+  if (k === 'd') doDodge('left');
+  if (k === 's') doBlock('left');
+});
+
+canvas = document.getElementById('ring-canvas');
+ctx = canvas.getContext('2d');
+renderRoster();
+drawRing();
+</script>
+</body>
+</html>
