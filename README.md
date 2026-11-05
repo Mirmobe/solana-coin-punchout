@@ -11,11 +11,12 @@ Utility token for betting on the daily top-10 Solana coin battles.
 - **DexScreener:** https://dexscreener.com/solana/BdVA3nqz5mgZrhnxffe8ubkEvy4LcdNr4cNRMYDLpump
 
 ## Features
-- Top 10 Solana coins ranked by activity, organic/smart score, price, and market cap
-- Mike Tyson Punch-Out style battle arena
-- Place bets with $PUNCH
-- Connect Phantom wallet
-- Swap $PUNCH via Jupiter
+- Real-time Punch-Out circuit: Freeman vs seven original presidential challengers
+- 1 Player vs CPU, or 2 Players on one keyboard / two gamepads / split touch controls
+- 3 rounds, 1:00 each, knockdown counts, 3-knockdown TKO, and a decision on the cards
+- Keyboard, on-screen touch pad (portrait and landscape), and Xbox controllers
+- Place bets with $PUNCH, connect a Phantom wallet, swap via Jupiter
+- [All apps](links.html)
 
 ## Daily Live
 Broadcast at 8pm EST on YouTube: **In The Ancient Now**
