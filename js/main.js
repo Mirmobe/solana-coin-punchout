@@ -133,6 +133,33 @@
       applyChrome();
     });
   }
+  document.querySelectorAll('#tip-jar [data-copy]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const text = button.getAttribute('data-copy');
+      const previous = button.textContent;
+      function done() {
+        button.textContent = 'Copied';
+        setTimeout(function () { button.textContent = previous; }, 1400);
+      }
+      function fallback() {
+        const el = document.createElement('textarea');
+        el.value = text;
+        el.setAttribute('readonly', '');
+        el.style.position = 'fixed';
+        el.style.left = '-999px';
+        document.body.appendChild(el);
+        el.select();
+        try { document.execCommand('copy'); done(); } catch (err) { PZ.log('Copy failed'); }
+        el.remove();
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(fallback);
+      } else {
+        fallback();
+      }
+    });
+  });
+
   const betToggle = document.getElementById('toggle-bets');
   if (betToggle) {
     betToggle.addEventListener('click', function () {

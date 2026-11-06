@@ -16,6 +16,7 @@ Utility token for betting on the daily top-10 Solana coin battles.
 - 3 rounds, 1:00 each, knockdown counts, 3-knockdown TKO, and a decision on the cards
 - Keyboard, on-screen touch pad (portrait and landscape), and Xbox controllers
 - Place bets with $PUNCH, connect a Phantom wallet, swap via Jupiter
+- Tip jar: Nathan's Solana wallet, mirmobe.skr, mirmobe.base.eth, and a PayPal.Me link that does not guess a username
 - [All apps](links.html)
 
 ## Daily Live

@@ -51,6 +51,15 @@ const report = await page.evaluate(async () => {
 
   check(g.state === 'title', 'starts on title');
   check(document.querySelector('a[href="links.html"]'), 'links.html is linked');
+  const jar = document.getElementById('tip-jar');
+  check(jar && jar.querySelector('a[href="https://mirmobe.github.io/solana-coin-punchout/links.html"]'), 'more apps link in the tip jar');
+  check(jar.querySelector('img[src="tip-jar-qr.png"]'), 'solana tip qr');
+  check(jar.querySelector('img[src="tip-jar-base-qr.png"]'), 'base tip qr');
+  check(document.getElementById('tip-sol-address').textContent === '5P1ArCLapXPjSEaNauVYAmtLKxEwoELcttQvPqmF1VYP', 'solana tip address');
+  check(document.getElementById('tip-base-address').textContent === '0xAb8c84cd8788Ad7Edc453724cc4e015144A6E338', 'base tip address');
+  check(jar.textContent.includes('mirmobe.skr') && jar.textContent.includes('mirmobe.base.eth'), 'both names are shown');
+  check(jar.querySelector('a[href="https://www.paypal.me/"]') && jar.textContent.includes('Choose your PayPal tip recipient in PayPal'), 'paypal landing label');
+  check(!jar.textContent.includes('BdVA3nqz'), 'tip jar is not the token mint');
   check(document.getElementById('punch-balance').textContent === '1000', 'starting balance');
   check(document.getElementById('connect-wallet'), 'wallet button');
   check(document.getElementById('punch-stake'), 'stake input');
