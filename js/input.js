@@ -11,7 +11,8 @@
       jabL: false, jabR: false, bodyL: false, bodyR: false,
       hookL: false, hookR: false, upper: false,
       pause: false, confirm: false, back: false, mash: false,
-      up: false, down: false, left: false, right: false
+      up: false, down: false, left: false, right: false,
+      moveX: 0, moveY: 0
     };
   }
 
@@ -28,7 +29,7 @@
       const self = this;
       window.addEventListener('keydown', function (e) {
         const k = e.key.toLowerCase();
-        if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'enter'].indexOf(k) >= 0) {
+        if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'enter', 'w', 'a', 's', 'd', 'q', 'e', 'x'].indexOf(k) >= 0) {
           e.preventDefault();
         }
         if (e.repeat) return;
@@ -123,26 +124,20 @@
       const sx = ax[0] || 0;
       const sy = ax[1] || 0;
       const prev = this.stickPrev[index];
-      const dead = 0.5;
-      const left = sx < -dead || pressed(14);
-      const right = sx > dead || pressed(15);
-      const up = sy < -dead || pressed(12);
-      const down = sy > dead || pressed(13);
-      const wasL = prev.x < -dead;
-      const wasR = prev.x > dead;
-      const wasU = prev.y < -dead;
-      const wasD = prev.y > dead;
+      const moveDead = 0.18;
       prev.x = sx;
       prev.y = sy;
+      snap.moveX = Math.abs(sx) > moveDead ? Math.max(-1, Math.min(1, sx)) : 0;
+      snap.moveY = Math.abs(sy) > moveDead ? Math.max(-1, Math.min(1, sy)) : 0;
 
-      snap.dodgeL = (left && !wasL) || edge(14);
-      snap.dodgeR = (right && !wasR) || edge(15);
-      snap.duck = down;
-      snap.block = up && !down;
-      snap.up = (up && !wasU) || edge(12);
-      snap.down = (down && !wasD) || edge(13);
-      snap.left = snap.dodgeL;
-      snap.right = snap.dodgeR;
+      snap.dodgeL = edge(14);
+      snap.dodgeR = edge(15);
+      snap.duck = pressed(13);
+      snap.block = pressed(12) && !pressed(13);
+      snap.up = edge(12);
+      snap.down = edge(13);
+      snap.left = edge(14);
+      snap.right = edge(15);
 
       snap.jabL = edge(0);
       snap.jabR = edge(1);
@@ -166,6 +161,8 @@
       snap.dodgeR = edge(scheme.dodgeR);
       snap.duck = held(scheme.duck);
       snap.block = held(scheme.block);
+      snap.moveX = (held(scheme.moveR || []) ? 1 : 0) - (held(scheme.moveL || []) ? 1 : 0);
+      snap.moveY = (held(scheme.moveD || []) ? 1 : 0) - (held(scheme.moveU || []) ? 1 : 0);
       snap.jabL = edge(scheme.jabL);
       snap.jabR = edge(scheme.jabR);
       snap.bodyL = edge(scheme.bodyL);
@@ -176,10 +173,10 @@
       snap.pause = edge(scheme.pause || []);
       snap.confirm = edge(scheme.confirm || []);
       snap.back = edge(scheme.back || []);
-      snap.up = edge(scheme.block);
-      snap.down = edge(scheme.duck);
-      snap.left = snap.dodgeL;
-      snap.right = snap.dodgeR;
+      snap.up = edge(scheme.moveU || scheme.block || []);
+      snap.down = edge(scheme.moveD || scheme.duck || []);
+      snap.left = edge(scheme.moveL || []);
+      snap.right = edge(scheme.moveR || []);
       PUNCHES.forEach(function (p) { if (snap[p]) snap.mash = true; });
       return snap;
     },
@@ -192,11 +189,13 @@
       snap.dodgeR = edge.has('dodgeR');
       snap.duck = !!hold.duck;
       snap.block = !!hold.block;
+      snap.moveX = (hold.moveR ? 1 : 0) - (hold.moveL ? 1 : 0);
+      snap.moveY = (hold.moveD ? 1 : 0) - (hold.moveU ? 1 : 0);
       PUNCHES.forEach(function (p) { snap[p] = edge.has(p); });
-      snap.up = edge.has('block');
-      snap.down = edge.has('duck');
-      snap.left = snap.dodgeL;
-      snap.right = snap.dodgeR;
+      snap.up = edge.has('moveU') || edge.has('block');
+      snap.down = edge.has('moveD') || edge.has('duck');
+      snap.left = edge.has('moveL') || snap.dodgeL;
+      snap.right = edge.has('moveR') || snap.dodgeR;
       snap.confirm = edge.has('jabL') || edge.has('upper');
       snap.back = edge.has('jabR');
       PUNCHES.forEach(function (p) { if (snap[p]) snap.mash = true; });
@@ -206,7 +205,11 @@
     merge: function (a, b) {
       const o = emptySnap();
       Object.keys(o).forEach(function (k) {
-        o[k] = !!(a[k] || b[k]);
+        if (k === 'moveX' || k === 'moveY') {
+          const av = Number(a[k]) || 0;
+          const bv = Number(b[k]) || 0;
+          o[k] = Math.abs(av) >= Math.abs(bv) ? av : bv;
+        } else o[k] = !!(a[k] || b[k]);
       });
       return o;
     },
@@ -246,26 +249,34 @@
 
   const SCHEMES = {
     p1: {
-      dodgeL: ['a'],
-      dodgeR: ['d'],
-      duck: ['s'],
-      block: ['w'],
+      moveL: ['a'],
+      moveR: ['d'],
+      moveU: ['w'],
+      moveD: ['s'],
+      dodgeL: ['q'],
+      dodgeR: ['e'],
+      duck: ['x'],
+      block: ['shift'],
       jabL: ['f', 'j'],
       jabR: ['g'],
       hookL: ['r', 'u'],
       hookR: ['t'],
       bodyL: ['c', 'h'],
       bodyR: ['v'],
-      upper: [' ', 'e'],
+      upper: [' '],
       pause: ['p', 'escape'],
       confirm: ['enter', ' '],
       back: ['escape', 'backspace']
     },
     p2: {
-      dodgeL: ['arrowleft'],
-      dodgeR: ['arrowright'],
-      duck: ['arrowdown'],
-      block: ['arrowup'],
+      moveL: ['arrowleft'],
+      moveR: ['arrowright'],
+      moveU: ['arrowup'],
+      moveD: ['arrowdown'],
+      dodgeL: ['n'],
+      dodgeR: ['m'],
+      duck: [']'],
+      block: ['['],
       jabL: ['k'],
       jabR: ['l'],
       hookL: ['i'],

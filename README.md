@@ -14,9 +14,11 @@ Utility token for betting on the daily top-10 Solana coin battles.
 - Real-time Punch-Out circuit: Freeman vs seven original presidential challengers
 - 1 Player vs CPU, or 2 Players on one keyboard / two gamepads / split touch controls
 - 3 rounds, 1:00 each, knockdown counts, 3-knockdown TKO, and a decision on the cards
-- Keyboard, on-screen touch pad (portrait and landscape), and Xbox controllers
+- Overhead ring at a 33 degree angle, with fighters moving around the canvas
+- Keyboard, Xbox controllers, and floating landscape touch controls
+- Phones turn sideways for the fight; portrait shows a rotate prompt
 - Place bets with $PUNCH, connect a Phantom wallet, swap via Jupiter
-- Tip jar: Nathan's Solana wallet, mirmobe.skr, mirmobe.base.eth, and a PayPal.Me link that does not guess a username
+- Tip Jar button on the title screen opens [tips.html](tips.html) in a new tab
 - [All apps](links.html)
 
 ## Daily Live

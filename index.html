@@ -21,56 +21,6 @@
 </header>
 
 <div id="layout">
-  <aside id="side-col">
-  <section id="tip-jar" class="tip-jar" aria-label="PUNCH tip jar">
-    <h2>PUNCH tip jar</h2>
-    <a class="apps-link" href="https://mirmobe.github.io/solana-coin-punchout/links.html">More of my apps</a>
-    <p>Tips go to Nathan. Nothing here is the PUNCH token mint, and this page does not send funds for you.</p>
-
-    <article class="tip-option">
-      <h3>Solana · Nathan's tip wallet</h3>
-      <p>Scan with Phantom, Solflare, or another Solana wallet. The code is a Solana Pay link to this wallet, and the wallet asks you for the amount.</p>
-      <a class="qr-link" href="solana:5P1ArCLapXPjSEaNauVYAmtLKxEwoELcttQvPqmF1VYP">
-        <img src="tip-jar-qr.png" width="168" height="168" alt="QR code for Nathan's Solana tip wallet">
-      </a>
-      <p class="tip-addr" id="tip-sol-address">5P1ArCLapXPjSEaNauVYAmtLKxEwoELcttQvPqmF1VYP</p>
-      <div class="tip-actions">
-        <button type="button" id="copy-sol-tip" data-copy="5P1ArCLapXPjSEaNauVYAmtLKxEwoELcttQvPqmF1VYP">Copy address</button>
-        <a href="https://solscan.io/account/5P1ArCLapXPjSEaNauVYAmtLKxEwoELcttQvPqmF1VYP" target="_blank" rel="noopener">Solscan</a>
-      </div>
-    </article>
-
-    <article class="tip-option">
-      <h3>Solana name · mirmobe.skr</h3>
-      <p>AllDomains name on Solana. It resolves to Nathan's tip wallet above, the same Solana address.</p>
-      <p class="tip-addr">mirmobe.skr</p>
-      <div class="tip-actions">
-        <button type="button" id="copy-skr-name" data-copy="mirmobe.skr">Copy name</button>
-        <button type="button" data-copy="5P1ArCLapXPjSEaNauVYAmtLKxEwoELcttQvPqmF1VYP">Copy resolved address</button>
-        <a href="https://alldomains.id/domain/mirmobe.skr" target="_blank" rel="noopener">AllDomains</a>
-      </div>
-    </article>
-
-    <article class="tip-option">
-      <h3>Base · mirmobe.base.eth</h3>
-      <p>Basename on Base. This is an EVM address, not the Solana wallet. Scan with a wallet that supports Base.</p>
-      <a class="qr-link" href="ethereum:0xAb8c84cd8788Ad7Edc453724cc4e015144A6E338@8453">
-        <img src="tip-jar-base-qr.png" width="168" height="168" alt="QR code for mirmobe.base.eth on Base">
-      </a>
-      <p class="tip-addr" id="tip-base-address">0xAb8c84cd8788Ad7Edc453724cc4e015144A6E338</p>
-      <div class="tip-actions">
-        <button type="button" id="copy-base-name" data-copy="mirmobe.base.eth">Copy name</button>
-        <button type="button" id="copy-base-tip" data-copy="0xAb8c84cd8788Ad7Edc453724cc4e015144A6E338">Copy address</button>
-        <a href="https://basescan.org/address/0xAb8c84cd8788Ad7Edc453724cc4e015144A6E338" target="_blank" rel="noopener">Basescan</a>
-      </div>
-    </article>
-
-    <article class="tip-option">
-      <h3>PayPal</h3>
-      <p>No PayPal username is filled in here.</p>
-      <a class="paypal-link" href="https://www.paypal.me/" target="_blank" rel="noopener">Choose your PayPal tip recipient in PayPal</a>
-    </article>
-  </section>
   <section id="bet-panel" class="bet-panel">
     <div class="coin">PUNCH</div>
     <h2>Punch-Out Coin ($PUNCH)</h2>
@@ -95,19 +45,32 @@
       <a href="https://dexscreener.com/solana/BdVA3nqz5mgZrhnxffe8ubkEvy4LcdNr4cNRMYDLpump" target="_blank" rel="noopener">DexScreener</a>
     </div>
   </section>
-  </aside>
 
   <div id="stage">
     <canvas id="game" width="480" height="800" aria-label="Solana Coin Punch-Out game"></canvas>
+    <a id="tip-jar-link" class="tip-jar-link" href="tips.html" target="_blank" rel="noopener noreferrer">TIP JAR</a>
+    <div id="rotate-gate" hidden>
+      <div class="rotate-card">
+        <div class="rotate-phone" aria-hidden="true"></div>
+        <p class="rotate-title">TURN SIDEWAYS</p>
+        <p>Landscape view looks down into the ring. Rotate your phone to move and fight.</p>
+      </div>
+    </div>
     <div id="touch" aria-hidden="true">
       <div class="side" data-p="0">
-        <div>
-          <div class="who">P1</div>
+        <div class="move-col">
+          <div class="who">MOVE</div>
           <div class="dpad">
-            <button type="button" class="up" data-act="block" aria-label="Player 1 block">▲</button>
-            <button type="button" class="left" data-act="dodgeL" aria-label="Player 1 dodge left">◀</button>
-            <button type="button" class="right" data-act="dodgeR" aria-label="Player 1 dodge right">▶</button>
-            <button type="button" class="down" data-act="duck" aria-label="Player 1 duck">▼</button>
+            <button type="button" class="up" data-act="moveU" aria-label="Player 1 move up">▲</button>
+            <button type="button" class="left" data-act="moveL" aria-label="Player 1 move left">◀</button>
+            <button type="button" class="right" data-act="moveR" aria-label="Player 1 move right">▶</button>
+            <button type="button" class="down" data-act="moveD" aria-label="Player 1 move down">▼</button>
+          </div>
+          <div class="defense">
+            <button type="button" data-act="dodgeL" aria-label="Player 1 slip left">SLIP L</button>
+            <button type="button" data-act="block" aria-label="Player 1 block">BLOCK</button>
+            <button type="button" data-act="duck" aria-label="Player 1 duck">DUCK</button>
+            <button type="button" data-act="dodgeR" aria-label="Player 1 slip right">SLIP R</button>
           </div>
         </div>
         <div class="punches">
@@ -130,13 +93,19 @@
           <button type="button" data-act="bodyL">L BODY</button>
           <button type="button" data-act="bodyR">R BODY</button>
         </div>
-        <div>
-          <div class="who">P2</div>
+        <div class="move-col">
+          <div class="who">MOVE</div>
           <div class="dpad">
-            <button type="button" class="up" data-act="block" aria-label="Player 2 block">▲</button>
-            <button type="button" class="left" data-act="dodgeL" aria-label="Player 2 dodge left">◀</button>
-            <button type="button" class="right" data-act="dodgeR" aria-label="Player 2 dodge right">▶</button>
-            <button type="button" class="down" data-act="duck" aria-label="Player 2 duck">▼</button>
+            <button type="button" class="up" data-act="moveU" aria-label="Player 2 move up">▲</button>
+            <button type="button" class="left" data-act="moveL" aria-label="Player 2 move left">◀</button>
+            <button type="button" class="right" data-act="moveR" aria-label="Player 2 move right">▶</button>
+            <button type="button" class="down" data-act="moveD" aria-label="Player 2 move down">▼</button>
+          </div>
+          <div class="defense">
+            <button type="button" data-act="dodgeL" aria-label="Player 2 slip left">SLIP L</button>
+            <button type="button" data-act="block" aria-label="Player 2 block">BLOCK</button>
+            <button type="button" data-act="duck" aria-label="Player 2 duck">DUCK</button>
+            <button type="button" data-act="dodgeR" aria-label="Player 2 slip right">SLIP R</button>
           </div>
         </div>
       </div>

@@ -8,10 +8,23 @@
   PZ.VIEW = {
     W: W,
     H: H,
-ground: 690,
-  leftX: 118,
-  rightX: 362,
+    ground: 690,
+    leftX: 118,
+    rightX: 362,
+    elev: 33 * Math.PI / 180,
+    ringC: { x: 240, y: 545, rx: 220 },
     ring: [[76, 368], [404, 368], [458, 712], [22, 712]]
+  };
+
+  /* 33 degrees above the horizon: the ring floor is an ellipse, nearer edge larger. */
+  PZ.project = function (x, z) {
+    const c = PZ.VIEW.ringC;
+    const ry = c.rx * Math.sin(PZ.VIEW.elev);
+    return {
+      x: c.x + x * c.rx,
+      y: c.y + z * ry,
+      scale: 0.5 + ((z + 1) * 0.5) * 0.26
+    };
   };
 
   const promo = new Image();
@@ -90,31 +103,54 @@ ground: 690,
       }
     }
 
-    const ring = PZ.VIEW.ring;
-    polyPath(ctx, ring);
-    const fg = ctx.createLinearGradient(0, 360, 0, 720);
-    fg.addColorStop(0, '#2a1468');
-    fg.addColorStop(1, '#4a22a0');
-    ctx.fillStyle = fg;
-    ctx.fill();
+    drawOverheadRing(ctx);
+    return backdrop;
+  }
 
+  function drawOverheadRing(ctx) {
+    const c = PZ.VIEW.ringC;
+    const ry = c.rx * Math.sin(PZ.VIEW.elev);
+    ctx.fillStyle = '#e8b423';
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y + 10, c.rx + 28, ry + 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#c48a14';
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y + 16, c.rx + 28, ry + 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const fg = ctx.createLinearGradient(0, c.y - ry, 0, c.y + ry);
+    fg.addColorStop(0, '#2a1468');
+    fg.addColorStop(1, '#5a28b0');
+    ctx.fillStyle = fg;
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y, c.rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = '#7a4ad8';
-    for (let y = 380; y < 700; y += 10) {
-      for (let x = 30; x < 460; x += 10) {
-        if (inPoly(x, y, ring) && ((x + y) % 20 === 0)) ctx.fillRect(x, y, 2, 2);
+    for (let row = -4; row <= 4; row++) {
+      for (let col = -6; col <= 6; col++) {
+        const px = c.x + col * 28;
+        const py = c.y + row * 18;
+        const nx = (px - c.x) / c.rx;
+        const nz = (py - c.y) / ry;
+        if (nx * nx + nz * nz < 0.86 && ((col + row) % 2 === 0)) ctx.fillRect(px, py, 2, 2);
       }
     }
-
-    /* Apron. */
-    ctx.fillStyle = '#e8b423';
-    ctx.fillRect(10, 712, 460, 70);
-    ctx.fillStyle = '#c48a14';
-    ctx.fillRect(10, 764, 460, 18);
-    ctx.fillStyle = '#ffd24a';
-    for (let x = 18; x < 460; x += 16) ctx.fillRect(x, 718, 8, 4);
-
-    drawRopes(ctx);
-    return backdrop;
+    const colors = ['#3d7dff', '#f4f4f8', '#e23b4a'];
+    colors.forEach(function (color, i) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, c.rx - 8 + i * 7, ry - 4 + i * 4, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+    [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(function (p) {
+      const x = c.x + p[0] * c.rx;
+      const y = c.y + p[1] * ry;
+      ctx.fillStyle = '#141414';
+      ctx.fillRect(x - 5, y - 18, 10, 28);
+      ctx.fillStyle = '#ffd24a';
+      ctx.fillRect(x - 7, y - 24, 14, 8);
+    });
   }
 
   function drawRopes(ctx) {
@@ -242,7 +278,8 @@ ground: 690,
       const u = Math.min(1, f.dodge.age / f.dodge.dur);
       const mag = Math.sin(u * Math.PI);
       const dir = f.dodge.dir === 'L' ? 1 : -1;
-      v.slipY = -f.facing * dir * 26 * mag;
+      v.slipX = f.facing * dir * 28 * mag;
+      v.slipY = -8 * mag;
       v.back = 16 * mag;
     }
     if (f.tell) {
@@ -498,7 +535,7 @@ function drawGlove(ctx, f, p, hot) {
   function drawFighter(ctx, f, x, y, scale) {
     const vis = visualOf(f);
     ctx.save();
-    ctx.translate(px(x), px(y + vis.slipY));
+    ctx.translate(px(x + (vis.slipX || 0)), px(y + vis.slipY));
     ctx.scale(scale || 1, scale || 1);
     ctx.fillStyle = 'rgba(0,0,0,0.38)';
     ctx.beginPath();
@@ -604,22 +641,9 @@ function drawGlove(ctx, f, p, hot) {
   }
 
   function ringPoint(s) {
-    const ring = PZ.VIEW.ring;
-    const sides = [[ring[0], ring[1]], [ring[1], ring[2]], [ring[2], ring[3]], [ring[3], ring[0]]];
-    const u = ((s % 1) + 1) % 1 * 4;
-    const i = Math.min(3, Math.floor(u));
-    const f = u - i;
-    const a = sides[i][0];
-    const b = sides[i][1];
-    const x = a[0] + (b[0] - a[0]) * f;
-    const y = a[1] + (b[1] - a[1]) * f;
-    const depth = (y - 368) / (712 - 368);
-    return {
-      x: x,
-      y: y,
-      facing: b[0] >= a[0] ? 1 : -1,
-      scale: 0.55 + depth * 0.7
-    };
+    const a = ((s % 1) + 1) % 1 * Math.PI * 2;
+    const p = PZ.project(Math.cos(a) * 0.92, Math.sin(a) * 0.92);
+    return { x: p.x, y: p.y, facing: Math.cos(a) >= 0 ? 1 : -1, scale: p.scale * 1.35 };
   }
 
   function drawGirl(ctx, x, y, scale, facing, sign) {
@@ -736,10 +760,9 @@ function drawHeart(ctx, x, y, fill) {
   }
 
   function fighterPos(game, f) {
-    const base = f.side === 0 ? PZ.VIEW.leftX : PZ.VIEW.rightX;
-    const spread = game.state === 'card' ? 46 : 0;
-    const x = f.side === 0 ? base - spread : base + spread;
-    return { x: x, y: PZ.VIEW.ground };
+    const spread = game.state === 'card' ? 0.18 : 0;
+    const x = (f.x || 0) + (f.side === 0 ? -spread : spread);
+    return PZ.project(x, f.z || 0);
   }
 
   function drawArena(game) {
@@ -763,26 +786,9 @@ function drawHeart(ctx, x, y, fill) {
       slots.sort(function (a, b) { return a.y - b.y; });
       slots.forEach(function (s) {
         const p = fighterPos(game, s.f);
-        drawFighter(ctx, s.f, p.x, p.y, 1);
+        drawFighter(ctx, s.f, p.x, p.y, p.scale || 0.62);
       });
     }
-
-    /* Near ropes and apron redraw so fighters stand inside the ring. */
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 708, W, 92);
-    ctx.clip();
-    ctx.drawImage(ensureBackdrop(), 0, 0);
-    ctx.restore();
-    const colors = ['#3d7dff', '#f4f4f8', '#e23b4a'];
-    colors.forEach(function (c, i) {
-      ctx.strokeStyle = c;
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(30, 724 + i * 12);
-      ctx.lineTo(450, 724 + i * 12);
-      ctx.stroke();
-    });
 
     if (girl && girl.y >= 520) {
       drawGirl(ctx, girl.x, Math.min(girl.y - 36, 620), girl.scale * 2.35, girl.facing, 'ROUND ' + (game.cardRound || 2));
@@ -792,7 +798,7 @@ function drawHeart(ctx, x, y, fill) {
       const df = game.players[game.downIndex];
       const p = fighterPos(game, df);
       const rx = df.side === 0 ? p.x + 90 : p.x - 90;
-      drawRef(ctx, rx, PZ.VIEW.ground, game.count || 0);
+      drawRef(ctx, rx, p.y, game.count || 0);
     }
 
     drawEffects(ctx, game);
@@ -934,10 +940,10 @@ function drawHeart(ctx, x, y, fill) {
       menuItem(ctx, item[0], 580 + i * 48, game.menuIndex === i, item[1]);
     });
     if (Math.floor((game.t || 0) * 2) % 2 === 0) {
-      text(ctx, 'PRESS START', W / 2, 740, 2, '#f4efe2', 'center', '#140818');
+      text(ctx, 'PRESS START', W / 2, 708, 2, '#f4efe2', 'center', '#140818');
     }
     const circuit = game.circuit || 0;
-    if (circuit > 0) text(ctx, 'CIRCUIT ' + circuit + ' / 7', W / 2, 768, 1, '#b7a8d4', 'center');
+    if (circuit > 0) text(ctx, 'CIRCUIT ' + circuit + ' / 7', W / 2, 730, 1, '#b7a8d4', 'center');
   }
 
   function drawControls() {
@@ -948,7 +954,8 @@ function drawHeart(ctx, x, y, fill) {
 
     text(ctx, 'KEYBOARD  P1', 16, 58, 2, '#14F195', 'left');
     const p1 = [
-      'W BLOCK   A / D DODGE   S DUCK',
+      'WASD MOVE   Q / E SLIP',
+      'SHIFT BLOCK    X DUCK',
       'F / G  LEFT / RIGHT JAB',
       'R / T  LEFT / RIGHT HOOK',
       'C / V  LEFT / RIGHT BODY',
@@ -958,7 +965,8 @@ function drawHeart(ctx, x, y, fill) {
 
     text(ctx, 'KEYBOARD  P2', 16, 190, 2, '#ffd24a', 'left');
     const p2 = [
-      'ARROWS  BLOCK / DODGE / DUCK',
+      'ARROWS MOVE   N / M SLIP',
+      '[ BLOCK    ] DUCK',
       'K / L  LEFT / RIGHT JAB',
       'I / O  LEFT / RIGHT HOOK',
       ', / .  LEFT / RIGHT BODY',
@@ -968,8 +976,8 @@ function drawHeart(ctx, x, y, fill) {
 
     text(ctx, 'XBOX GAMEPAD', 16, 320, 2, '#ff3ec8', 'left');
     const pad = [
-      'STICK / D-PAD',
-      'LEFT RIGHT DODGE  DOWN DUCK  UP BLOCK',
+      'LEFT STICK MOVES AROUND THE RING',
+      'D-PAD  SLIP / DUCK / BLOCK',
       'A / B   LEFT / RIGHT JAB',
       'X / Y   LEFT / RIGHT HOOK',
       'LB / LT LEFT / RIGHT BODY',
@@ -981,9 +989,9 @@ function drawHeart(ctx, x, y, fill) {
 
     text(ctx, 'TOUCH', 16, 510, 2, '#14F195', 'left');
     const touch = [
-      'ON-SCREEN D-PAD + PUNCH BUTTONS',
-      'PORTRAIT OR LANDSCAPE',
-      '2P ON ONE PHONE: SPLIT PADS',
+      'TURN THE PHONE SIDEWAYS',
+      'FLOATING MOVE STICK AND PUNCHES',
+      '2P ON ONE PHONE: PADS ON EACH SIDE',
       'OR ONE PAD PLUS A GAMEPAD',
       'P PAUSE    M MUTE    ESC BACK'
     ];

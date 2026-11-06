@@ -62,8 +62,56 @@
       tell: null,
       aiWait: 0.8,
       duckTimer: 0,
-      blockTimer: 0
+      blockTimer: 0,
+      x: side === 0 ? -0.22 : 0.22,
+      z: side === 0 ? 0.1 : -0.08
     };
+  }
+
+  function homeSpot(f) {
+    f.x = f.side === 0 ? -0.22 : 0.22;
+    f.z = f.side === 0 ? 0.1 : -0.08;
+    f.facing = f.side === 0 ? 1 : -1;
+  }
+
+  function canMove(f) {
+    return !f.down && !f.action && !(f.dodge && f.dodge.age < f.dodge.dur) && f.stun <= 0.05;
+  }
+
+  function moveFighter(f, dt, mx, mz, speedMul) {
+    if (!canMove(f)) return;
+    const mag = Math.hypot(mx, mz);
+    if (mag < 0.08) return;
+    const speed = 1.2 * (speedMul || 1) * (0.78 + (f.def.speed || 5) * 0.04);
+    f.x += (mx / mag) * speed * dt;
+    f.z += (mz / mag) * speed * dt;
+    const r = Math.hypot(f.x, f.z);
+    const maxR = 0.86;
+    if (r > maxR) {
+      f.x *= maxR / r;
+      f.z *= maxR / r;
+    }
+  }
+
+  function faceFoe(f) {
+    const foe = foeOf(f);
+    if (!foe) return;
+    f.facing = foe.x >= f.x ? 1 : -1;
+  }
+
+  function reachOf(move) {
+    if (move.kind === 'hook') return 0.9;
+    if (move.kind === 'upper' || move.kind === 'star') return 0.94;
+    if (move.kind === 'body') return 1.02;
+    return 1.14;
+  }
+
+  function strikePoint(f) {
+    if (PZ.project) {
+      const p = PZ.project(f.x || 0, f.z || 0);
+      return { x: p.x, y: p.y - 70 };
+    }
+    return { x: f.side === 0 ? 160 : 320, y: 460 };
   }
 
   PZ.dummyFighter = function (def, side) {
@@ -276,6 +324,11 @@
       PZ.audio.whiff();
       return;
     }
+    const dist = Math.hypot((att.x || 0) - (def.x || 0), (att.z || 0) - (def.z || 0));
+    if (dist > reachOf(move)) {
+      PZ.audio.whiff();
+      return;
+    }
 
     const slipping = def.slipTimer > 0 && (move.avoid === 'any' || move.avoid === def.slip);
     const ducking = def.duckHeld && def.duckAge > 0.045 && move.high && move.kind !== 'upper' && move.kind !== 'star';
@@ -283,8 +336,9 @@
       PZ.audio.whiff();
       def.stars = Math.min(3, def.stars + 0.5);
       att.stun = Math.max(att.stun, 0.32);
-      spawnFloater(def.side === 0 ? 150 : 340, 460, slipping ? 'SLIP' : 'DUCK', '#14F195');
-      spawnSparks(def.side === 0 ? 170 : 320, 520, '#14F195');
+      const slipAt = strikePoint(def);
+      spawnFloater(slipAt.x, slipAt.y, slipping ? 'SLIP' : 'DUCK', '#14F195');
+      spawnSparks(slipAt.x, slipAt.y + 40, '#14F195');
       return;
     }
 
@@ -295,7 +349,8 @@
       def.stam = Math.max(0, def.stam - 9);
       def.flash = 0.08;
       PZ.audio.block();
-      spawnFloater(def.side === 0 ? 150 : 340, 450, 'BLOCK', '#9bd');
+      const blockAt = strikePoint(def);
+      spawnFloater(blockAt.x, blockAt.y, 'BLOCK', '#9bd');
       return;
     }
 
@@ -323,18 +378,20 @@
     att.points += move.kind === 'star' ? 3 : 2;
     game.shake = Math.max(game.shake, move.kind === 'star' ? 0.28 : 0.1);
     PZ.audio.hit(move.kind);
-    const fx = def.side === 0 ? 160 : 320;
-    spawnSparks(fx, 500, move.kind === 'star' ? '#ffd24a' : '#fff');
-    spawnFloater(fx, 430, (counter ? 'COUNTER ' : '') + dmg, move.kind === 'star' ? '#ffd24a' : '#fff');
+    const fx = strikePoint(def);
+    spawnSparks(fx.x, fx.y + 30, move.kind === 'star' ? '#ffd24a' : '#fff');
+    spawnFloater(fx.x, fx.y, (counter ? 'COUNTER ' : '') + dmg, move.kind === 'star' ? '#ffd24a' : '#fff');
     if (move.kind === 'star') {
       game.flashBanner = { text: 'STAR PUNCH!', age: 0, dur: 0.7 };
     }
   }
 
-  function handleHuman(f, inp) {
+  function handleHuman(f, inp, dt) {
     f.duckHeld = !!inp.duck;
     f.blockHeld = !!inp.block && !inp.duck;
     if (f.down) return;
+    moveFighter(f, dt, inp.moveX || 0, inp.moveY || 0, 1);
+    faceFoe(f);
     if (inp.dodgeL) tryDodge(f, 'L');
     else if (inp.dodgeR) tryDodge(f, 'R');
     else if (inp.jabL) tryPunch(f, 'jabL');
@@ -367,6 +424,16 @@
       f.blockTimer -= dt;
       f.blockHeld = f.blockTimer > 0;
     } else f.blockHeld = false;
+
+    const quarry = foeOf(f);
+    if (quarry && !f.tell && !f.down) {
+      const dx = quarry.x - f.x;
+      const dz = quarry.z - f.z;
+      const dist = Math.hypot(dx, dz) || 0.001;
+      if (dist > 0.58) moveFighter(f, dt, dx, dz, 1);
+      else moveFighter(f, dt, -dz, dx, 0.42);
+      faceFoe(f);
+    }
 
     if (f.down || f.stun > 0.05 || f.locked > 0) return;
     if (f.action) return;
@@ -571,6 +638,7 @@
       f.duckHeld = false;
       f.blockHeld = false;
       f.aiWait = 0.7;
+      homeSpot(f);
     });
   }
 
@@ -751,10 +819,11 @@
     if (game.flashBanner) game.flashBanner.age += dt;
 
     /* Input before the sim step so a slip on this frame still covers the punch. */
-    if (game.players[0].human) handleHuman(game.players[0], inputs[0]);
+    if (game.players[0].human) handleHuman(game.players[0], inputs[0], dt);
     else handleAI(game.players[0], dt);
-    if (game.players[1].human) handleHuman(game.players[1], inputs[1]);
+    if (game.players[1].human) handleHuman(game.players[1], inputs[1], dt);
     else handleAI(game.players[1], dt);
+    game.players.forEach(faceFoe);
     const pending = [];
     game.players.forEach(function (f) { pending.push(advanceFighter(f, dt)); });
     pending.forEach(function (hit, i) {

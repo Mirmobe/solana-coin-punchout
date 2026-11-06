@@ -51,15 +51,32 @@ const report = await page.evaluate(async () => {
 
   check(g.state === 'title', 'starts on title');
   check(document.querySelector('a[href="links.html"]'), 'links.html is linked');
-  const jar = document.getElementById('tip-jar');
-  check(jar && jar.querySelector('a[href="https://mirmobe.github.io/solana-coin-punchout/links.html"]'), 'more apps link in the tip jar');
-  check(jar.querySelector('img[src="tip-jar-qr.png"]'), 'solana tip qr');
-  check(jar.querySelector('img[src="tip-jar-base-qr.png"]'), 'base tip qr');
-  check(document.getElementById('tip-sol-address').textContent === '5P1ArCLapXPjSEaNauVYAmtLKxEwoELcttQvPqmF1VYP', 'solana tip address');
-  check(document.getElementById('tip-base-address').textContent === '0xAb8c84cd8788Ad7Edc453724cc4e015144A6E338', 'base tip address');
-  check(jar.textContent.includes('mirmobe.skr') && jar.textContent.includes('mirmobe.base.eth'), 'both names are shown');
-  check(jar.querySelector('a[href="https://www.paypal.me/"]') && jar.textContent.includes('Choose your PayPal tip recipient in PayPal'), 'paypal landing label');
-  check(!jar.textContent.includes('BdVA3nqz'), 'tip jar is not the token mint');
+  check(!document.getElementById('tip-jar'), 'tip wallet is not drawn inside the game');
+  const tipLink = document.getElementById('tip-jar-link');
+  check(tipLink && tipLink.getAttribute('href') === 'tips.html' && tipLink.target === '_blank', 'title tip jar opens tips.html in a new tab');
+  const tipsHtml = await fetch('tips.html').then((r) => r.text());
+  check(tipsHtml.includes('href="links.html"') && tipsHtml.includes('All Apps'), 'tips page keeps All Apps');
+  check(tipsHtml.includes('tip-jar-qr.png') && tipsHtml.includes('5P1ArCLapXPjSEaNauVYAmtLKxEwoELcttQvPqmF1VYP'), 'tips page keeps the solana wallet');
+  check(tipsHtml.includes('mirmobe.skr') && tipsHtml.includes('mirmobe.base.eth') && tipsHtml.includes('0xAb8c84cd8788Ad7Edc453724cc4e015144A6E338'), 'tips page keeps both names');
+  check(tipsHtml.includes('https://www.paypal.me/') && tipsHtml.includes('Choose your PayPal tip recipient in PayPal'), 'tips page keeps the paypal landing label');
+  check(!tipsHtml.includes('BdVA3nqz'), 'tips page is not the token mint');
+  PZ.drawFrame(g);
+  const canvas = document.getElementById('game');
+  const cr = canvas.getBoundingClientRect();
+  const linkBox = tipLink.getBoundingClientRect();
+  const covers = (id) => {
+    const h = (PZ.hotspots || []).find((s) => s.id === id);
+    if (!h) return true;
+    const box = {
+      left: cr.left + h.x * cr.width / canvas.width,
+      top: cr.top + h.y * cr.height / canvas.height,
+      right: cr.left + (h.x + h.w) * cr.width / canvas.width,
+      bottom: cr.top + (h.y + h.h) * cr.height / canvas.height
+    };
+    return linkBox.left < box.right && linkBox.right > box.left && linkBox.top < box.bottom && linkBox.bottom > box.top;
+  };
+  check(linkBox.width > 40 && linkBox.height > 16, 'tip link is visible on the title, ' + Math.round(linkBox.width) + 'x' + Math.round(linkBox.height));
+  check(!covers('p1') && !covers('p2') && !covers('controls'), 'tip link does not cover player selection');
   check(document.getElementById('punch-balance').textContent === '1000', 'starting balance');
   check(document.getElementById('connect-wallet'), 'wallet button');
   check(document.getElementById('punch-stake'), 'stake input');
@@ -99,22 +116,59 @@ const report = await page.evaluate(async () => {
   check(g.players[0].def.id === 'freeman', 'hero is Freeman');
   check(g.players[1].def.id === 'washington', 'first opponent');
   check(Math.abs(g.clock - 60) < 1.2, 'clock opens at 1:00, saw ' + g.clock);
+  const home = () => {
+    g.players[0].x = -0.22; g.players[0].z = 0.1;
+    g.players[1].x = 0.22; g.players[1].z = -0.08;
+  };
+  const x0 = g.players[0].x;
+  const z0 = g.players[0].z;
+  press('d', 0.4);
+  check(g.players[0].x > x0 + 0.15, 'WASD moves around the ring, x ' + g.players[0].x);
+  PZ.input.touchDown(0, 'moveU');
+  PZ.advance(0.3);
+  PZ.input.touchUp(0, 'moveU');
+  check(g.players[0].z < z0 - 0.05, 'touch pad moves up the ring, z ' + g.players[0].z);
+  home();
+  g.players[0].x = -0.8; g.players[0].z = 0.7;
+  g.players[1].x = 0.8; g.players[1].z = -0.7;
+  const farHp = g.players[1].hp;
+  press('f', 0.04);
+  PZ.advance(0.35);
+  check(g.players[1].hp === farHp, 'jab misses from across the ring');
+  home();
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  check(getComputedStyle(document.getElementById('tip-jar-link')).display === 'none', 'tip link is hidden during a fight');
 
   const clockBefore = g.clock;
   PZ.advance(0.5);
   PZ.advance(0.5);
   check(Math.abs((clockBefore - g.clock) - 1) < 0.05, 'one sim second drops the clock by one, delta ' + (clockBefore - g.clock));
 
-  g.players[1].hp = 80;
-  g.players[1].duckHeld = false;
-  g.players[1].blockHeld = false;
-  g.players[1].slipTimer = 0;
-  g.players[1].iframe = 0;
-  g.players[1].tell = null;
-  const beforeJab = g.players[1].hp;
-  press('f', 0.04);
-  PZ.advance(0.35);
-  check(g.players[1].hp < beforeJab, 'keyboard jab deals damage ' + beforeJab + ' -> ' + g.players[1].hp);
+  const clearDefense = () => {
+    home();
+    g.players[1].hp = 80;
+    g.players[1].duckHeld = false;
+    g.players[1].blockHeld = false;
+    g.players[1].slipTimer = 0;
+    g.players[1].iframe = 0;
+    g.players[1].tell = null;
+    g.players[1].action = null;
+    g.players[0].stun = 0;
+    g.players[0].locked = 0;
+    g.players[0].action = null;
+    g.players[0].dodge = null;
+  };
+  let jabLanded = false;
+  let jabNote = '';
+  for (let i = 0; i < 3 && !jabLanded; i++) {
+    clearDefense();
+    const beforeJab = g.players[1].hp;
+    press('f', 0.04);
+    PZ.advance(0.35);
+    jabNote = beforeJab + ' -> ' + g.players[1].hp;
+    jabLanded = g.players[1].hp < beforeJab;
+  }
+  check(jabLanded, 'keyboard jab deals damage ' + jabNote);
 
   /* Dodge slips a left jab. */
   g.players[0].hp = 40;
@@ -139,6 +193,13 @@ const report = await page.evaluate(async () => {
   PZ.advance(0.35);
   check(g.players[1].hp < beforePad, 'gamepad A jab deals damage');
 
+  const stickX = g.players[0].x;
+  gp.axes[0] = 1;
+  PZ.advance(0.25);
+  gp.axes[0] = 0;
+  check(g.players[0].x > stickX + 0.08, 'left stick moves the fighter, x ' + g.players[0].x);
+  home();
+
   /* Touch right jab. */
   const beforeTouch = g.players[1].hp;
   PZ.input.touchDown(0, 'jabR');
@@ -159,6 +220,7 @@ const report = await page.evaluate(async () => {
   PZ.advance(0.5);
 
   /* Player knockdown: mash the on-screen punch buttons to beat the count. */
+  home();
   g.players[0].hp = 1;
   g.players[0].iframe = 0;
   g.players[0].slipTimer = 0;
@@ -181,6 +243,7 @@ const report = await page.evaluate(async () => {
 
   /* Opponent knockdowns: CPU beats the count until the third, which is a TKO. */
   const downAndUp = () => {
+    home();
     const def = g.players[1];
     const att = g.players[0];
     def.hp = 1;

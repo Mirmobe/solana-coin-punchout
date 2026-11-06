@@ -120,8 +120,28 @@
     document.body.classList.toggle('mode-2', g.mode === 2 && (g.state === 'fight' || g.state === 'down' || g.state === 'pause' || g.state === 'select'));
     document.body.classList.toggle('mode-1', !document.body.classList.contains('mode-2'));
     const play = g.state === 'fight' || g.state === 'down' || g.state === 'pause';
+    const phonePlay = play || g.state === 'intro' || g.state === 'card';
+    const portrait = window.innerHeight > window.innerWidth + 30;
+    const phone = coarsePointer() || window.innerWidth < 980;
     document.body.classList.toggle('touch-on', !!(touchWant.on && play));
+    document.body.classList.toggle('need-rotate', !!(phonePlay && portrait && phone));
+    document.body.classList.toggle('float-controls', !!(touchWant.on && play && !portrait));
+    document.body.classList.toggle('title-screen', g.state === 'title');
+    placeTipLink();
     if (window.innerWidth < 980) betPanel.classList.add('collapsed');
+  }
+
+  function placeTipLink() {
+    const link = document.getElementById('tip-jar-link');
+    const canvas = document.getElementById('game');
+    const stage = document.getElementById('stage');
+    if (!link || !canvas || !stage || PZ.game.state !== 'title') return;
+    const cr = canvas.getBoundingClientRect();
+    const sr = stage.getBoundingClientRect();
+    const band = cr.height * (64 / 800);
+    link.style.left = (cr.left - sr.left + cr.width / 2) + 'px';
+    link.style.top = (cr.bottom - sr.top - band) + 'px';
+    link.style.width = Math.round(Math.min(cr.width * 0.7, 300)) + 'px';
   }
 
   /* Phones start with the on-screen pad available. */
@@ -133,33 +153,6 @@
       applyChrome();
     });
   }
-  document.querySelectorAll('#tip-jar [data-copy]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      const text = button.getAttribute('data-copy');
-      const previous = button.textContent;
-      function done() {
-        button.textContent = 'Copied';
-        setTimeout(function () { button.textContent = previous; }, 1400);
-      }
-      function fallback() {
-        const el = document.createElement('textarea');
-        el.value = text;
-        el.setAttribute('readonly', '');
-        el.style.position = 'fixed';
-        el.style.left = '-999px';
-        document.body.appendChild(el);
-        el.select();
-        try { document.execCommand('copy'); done(); } catch (err) { PZ.log('Copy failed'); }
-        el.remove();
-      }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done).catch(fallback);
-      } else {
-        fallback();
-      }
-    });
-  });
-
   const betToggle = document.getElementById('toggle-bets');
   if (betToggle) {
     betToggle.addEventListener('click', function () {
@@ -167,6 +160,10 @@
     });
   }
   if (window.innerWidth < 980) betPanel.classList.add('collapsed');
+  window.addEventListener('resize', function () {
+    if (coarsePointer() || window.innerWidth < 900) touchWant.on = true;
+    applyChrome();
+  });
 
   let last = performance.now();
   function frame(now) {
