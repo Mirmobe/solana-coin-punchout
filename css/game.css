@@ -1,0 +1,279 @@
+:root {
+  --bg: #07060f;
+  --panel: #140a22;
+  --purple: #9945ff;
+  --teal: #14f195;
+  --gold: #ffd24a;
+  --magenta: #ff3ec8;
+  --ink: #f4efe2;
+  --dim: #b7a8d4;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: radial-gradient(circle at 50% 0%, #2a1048 0%, var(--bg) 55%);
+  color: var(--ink);
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+a { color: var(--teal); }
+button, a.btn {
+  font-family: inherit;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 12px;
+  background: rgba(8, 4, 16, 0.92);
+  border-bottom: 3px solid #3a1c78;
+  z-index: 4;
+}
+.brand {
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: var(--gold);
+  font-size: 14px;
+  text-shadow: 2px 2px 0 #5a2ca0;
+}
+.brand span { color: var(--teal); }
+.nav { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.nav a, .nav button, .bet-actions button {
+  background: #24143c;
+  color: var(--ink);
+  border: 2px solid var(--purple);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.nav button.primary, .bet-actions button.primary {
+  background: linear-gradient(90deg, var(--teal), #0d9a6a);
+  color: #07140e;
+  border-color: #b8ffe2;
+}
+
+#layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+}
+
+.bet-panel {
+  background: rgba(14, 8, 26, 0.94);
+  border-right: 3px solid #3a1c78;
+  padding: 12px;
+  overflow: auto;
+}
+.bet-panel h2 {
+  margin: 0 0 8px;
+  color: var(--teal);
+  font-size: 16px;
+}
+.bet-panel p { margin: 4px 0; font-size: 13px; color: var(--dim); line-height: 1.35; }
+.coin {
+  width: 64px; height: 64px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-weight: 900; color: #1a0a28;
+  background: radial-gradient(circle at 35% 30%, #ffe27a, #9945ff 70%);
+  box-shadow: 0 0 16px #9945ff;
+  margin-bottom: 8px;
+}
+.mint {
+  word-break: break-all;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--gold);
+}
+.bet-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.bet-row input {
+  width: 72px;
+  padding: 6px;
+  border-radius: 8px;
+  border: 2px solid var(--purple);
+  background: #0c0616;
+  color: white;
+}
+#wallet-status { font-size: 12px; color: #aaa; }
+#log {
+  margin-top: 10px;
+  background: #09060f;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 8px;
+  max-height: 140px;
+  overflow: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: #d7ffe9;
+}
+.links-mini { margin-top: 10px; font-size: 12px; }
+.links-mini a { display: inline-block; margin-right: 8px; }
+
+#stage {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 6px;
+}
+
+#game {
+  width: auto;
+  height: min(100%, calc(100vh - 58px));
+  max-width: 100%;
+  aspect-ratio: 480 / 800;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #07060f;
+  box-shadow: 0 0 40px rgba(153, 69, 255, 0.35);
+  touch-action: none;
+}
+
+body.touch-on #game {
+  height: min(78vh, calc(100vh - 58px - 210px));
+}
+
+#touch {
+  width: min(960px, 100%);
+  display: none;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px 8px;
+  user-select: none;
+  touch-action: none;
+}
+body.touch-on #touch { display: flex; }
+body.mode-1 #touch .side[data-p="1"] { display: none; }
+body.mode-1 #touch { justify-content: space-between; }
+
+.side {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.side[data-p="1"] { flex-direction: row-reverse; }
+
+.dpad {
+  display: grid;
+  grid-template-columns: 44px 44px 44px;
+  grid-template-rows: 44px 44px 44px;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.dpad .up { grid-column: 2; grid-row: 1; }
+.dpad .left { grid-column: 1; grid-row: 2; }
+.dpad .right { grid-column: 3; grid-row: 2; }
+.dpad .down { grid-column: 2; grid-row: 3; }
+
+.punches {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(46px, 1fr));
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+.punches button[data-act="bodyR"] { grid-column: 2; }
+
+#touch button {
+  border: 2px solid #ffd24a;
+  background: rgba(20, 8, 40, 0.82);
+  color: #ffe9a0;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  min-height: 42px;
+  padding: 4px;
+  cursor: pointer;
+  text-shadow: 0 1px 0 #000;
+}
+#touch button.held, #touch button:active {
+  background: #ffd24a;
+  color: #1a0a04;
+  transform: translateY(1px);
+}
+.dpad button { font-size: 16px; }
+
+.who {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--gold);
+  text-align: center;
+  margin-bottom: 2px;
+}
+
+@media (max-width: 980px) {
+  #layout { grid-template-columns: 1fr; }
+  .bet-panel { border-right: 0; border-bottom: 3px solid #3a1c78; max-height: 34vh; }
+  .bet-panel.collapsed { display: none; }
+  .brand { font-size: 12px; }
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .topbar { display: none; }
+  #layout { display: block; height: 100vh; }
+  .bet-panel { display: none !important; }
+  #stage {
+    display: block;
+    height: 100vh;
+    padding: 0;
+    position: relative;
+  }
+  body.touch-on #game {
+    height: 100vh;
+    max-height: 100vh;
+    display: block;
+    margin: 0 auto;
+  }
+  body.touch-on #touch {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 8px;
+    pointer-events: none;
+    align-items: flex-end;
+  }
+  body.touch-on #touch .side,
+  body.touch-on #touch button { pointer-events: auto; }
+  body.mode-1.touch-on #touch .side[data-p="0"] {
+    width: 100%;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  body.mode-1.touch-on #touch .punches {
+    flex: 0 0 auto;
+    width: min(280px, 34vw);
+  }
+  body.mode-2.touch-on #touch .side {
+    flex-direction: column;
+    align-items: center;
+    max-width: 46vw;
+    gap: 6px;
+  }
+  .dpad { grid-template-columns: 42px 42px 42px; grid-template-rows: 42px 42px 42px; }
+  #touch button { min-height: 36px; font-size: 10px; }
+}
+
+@media (max-width: 420px) {
+  .punches { grid-template-columns: repeat(3, minmax(36px, 1fr)); }
+  #touch button { font-size: 9px; padding: 2px; }
+  .dpad { grid-template-columns: 36px 36px 36px; grid-template-rows: 36px 36px 36px; }
+}
