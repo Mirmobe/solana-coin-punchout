@@ -990,8 +990,8 @@ function drawHeart(ctx, x, y, fill) {
     text(ctx, 'TOUCH', 16, 510, 2, '#14F195', 'left');
     const touch = [
       'TURN THE PHONE SIDEWAYS',
-      'FLOATING MOVE STICK AND PUNCHES',
-      '2P ON ONE PHONE: PADS ON EACH SIDE',
+      'DRAG WHERE YOU TOUCH TO MOVE',
+      '2P: A STICK ON EACH SIDE',
       'OR ONE PAD PLUS A GAMEPAD',
       'P PAUSE    M MUTE    ESC BACK'
     ];
@@ -1153,9 +1153,8 @@ function drawHeart(ctx, x, y, fill) {
     });
   }
 
-  PZ.drawFrame = function (game) {
-    const ctx = PZ.ctx;
-    if (!ctx) return;
+  function paintFrame(ctx, game, arenaOnly) {
+    PZ.ctx = ctx;
     PZ.hotspots = [];
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = false;
@@ -1168,16 +1167,224 @@ function drawHeart(ctx, x, y, fill) {
     else if (game.state === 'select') drawSelect(game);
     else {
       drawArena(game);
-      if (game.state === 'intro') drawIntro(game);
-      if (game.state === 'down') drawCount(game);
-      if (game.state === 'card') drawCardUi(game);
-      if (game.state === 'fight' || game.state === 'down' || game.state === 'card' || game.state === 'intro') drawHUD(game);
-      if (game.state === 'pause') {
-        drawHUD(game);
-        drawPause(game);
+      if (!arenaOnly) {
+        if (game.state === 'intro') drawIntro(game);
+        if (game.state === 'down') drawCount(game);
+        if (game.state === 'card') drawCardUi(game);
+        if (game.state === 'fight' || game.state === 'down' || game.state === 'card' || game.state === 'intro') drawHUD(game);
+        if (game.state === 'pause') {
+          drawHUD(game);
+          drawPause(game);
+        }
+        if (game.state === 'result') drawResult(game);
       }
-      if (game.state === 'result') drawResult(game);
     }
+  }
+
+  let offscreen = null;
+  function offscreenCanvas() {
+    if (!offscreen) {
+      offscreen = document.createElement('canvas');
+      offscreen.width = W;
+      offscreen.height = H;
+    }
+    return offscreen;
+  }
+
+  /* Backdrop gradient sampled the same way as the portrait arena. */
+  function backdropRGB(t) {
+    const stops = [
+      [0, [7, 6, 15]],
+      [0.35, [26, 10, 50]],
+      [0.7, [20, 8, 31]],
+      [1, [9, 6, 15]]
+    ];
+    const u = Math.max(0, Math.min(1, t));
+    let i = 0;
+    while (i < stops.length - 1 && u > stops[i + 1][0]) i++;
+    const a = stops[i];
+    const b = stops[Math.min(stops.length - 1, i + 1)];
+    const k = a[0] === b[0] ? 0 : (u - a[0]) / (b[0] - a[0]);
+    const c = a[1].map(function (v, n) { return Math.round(v + (b[1][n] - v) * k); });
+    return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+  }
+
+  function fillArenaWings(ctx, dw, dh, sy, srcH) {
+    const g = ctx.createLinearGradient(0, 0, 0, dh);
+    g.addColorStop(0, backdropRGB(sy / H));
+    g.addColorStop(0.5, backdropRGB((sy + srcH * 0.5) / H));
+    g.addColorStop(1, backdropRGB((sy + srcH) / H));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, dw, dh);
+    ctx.fillStyle = '#f4efe2';
+    for (let i = 0; i < 48; i++) {
+      const x = (i * 97) % Math.max(1, dw);
+      const y = ((i * 53) % Math.max(1, Math.floor(dh * 0.45)));
+      ctx.globalAlpha = 0.28 + (i % 3) * 0.12;
+      ctx.fillRect(x, y, (i % 2) + 1, (i % 2) + 1);
+    }
+    ctx.globalAlpha = 1;
+    for (let row = 0; row < 7; row++) {
+      const y = dh * 0.12 + row * Math.max(14, dh * 0.045);
+      for (let x = 10; x < dw; x += 16) {
+        ctx.fillStyle = (x + row) % 3 === 0 ? '#3a1868' : '#2a1248';
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = (x + row) % 5 === 0 ? '#ffd0f0' : '#c9a0d8';
+        ctx.fillRect(x - 1, y - 1, 2, 2);
+      }
+    }
+  }
+
+  function drawLandscapeChrome(ctx, game, dw, dh) {
+    const sc = dw / Math.max(1, window.innerWidth || dw);
+    ctx.save();
+    ctx.setTransform(sc, 0, 0, sc, 0, 0);
+    const w = dw / sc;
+    const h = dh / sc;
+    const bar = 54;
+    ctx.fillStyle = 'rgba(8, 4, 16, 0.82)';
+    ctx.fillRect(0, 0, w, bar);
+    ctx.fillStyle = '#ffd24a';
+    ctx.fillRect(0, bar - 2, w, 2);
+    const a = game.players[0];
+    const b = game.players[1];
+    if (a && b) {
+      text(ctx, a.def.name, 10, 4, 1, '#14F195', 'left', '#042');
+      text(ctx, b.def.name, w - 10, 4, 1, '#ffd24a', 'right', '#140818');
+      drawHeartsRow(ctx, 10, 16, a.hp, a.maxHp);
+      drawHeartsRow(ctx, w - 10 - 8 * 16, 16, b.hp, b.maxHp);
+      const clock = formatClock(game.clock);
+      const urgent = game.clock <= 10 && game.state === 'fight';
+      text(ctx, 'R' + game.round + '  ' + clock, w / 2, 4, 2, urgent ? '#ff3355' : '#ffd24a', 'center', '#140818');
+      meter(ctx, 10, 36, 90, 7, a.stam / a.maxStam, '#3af', '#123');
+      meter(ctx, w - 100, 36, 90, 7, b.stam / b.maxStam, '#3af', '#123');
+      drawStars(ctx, 108, 32, a.stars || 0);
+      drawStars(ctx, w - 100 - 48, 32, b.stars || 0);
+    }
+    if (game.banner && game.banner.age < game.banner.dur) {
+      text(ctx, game.banner.text, w / 2, bar + 10, 3, '#ffd24a', 'center', '#140818');
+    }
+    if (game.flashBanner && game.flashBanner.age < game.flashBanner.dur) {
+      text(ctx, game.flashBanner.text, w / 2, bar + 48, 2, '#fff6c2', 'center', '#5a2080');
+    }
+    if (game.state === 'intro' && a && b) {
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(w / 2 - 210, h * 0.28, 420, 150);
+      ctx.strokeStyle = '#ffd24a';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(w / 2 - 210, h * 0.28, 420, 150);
+      text(ctx, "LET'S GET READY", w / 2, h * 0.28 + 16, 2, '#ffd24a', 'center', '#140818');
+      text(ctx, a.def.name, w / 2, h * 0.28 + 48, 2, '#14F195', 'center', '#042');
+      text(ctx, 'VS', w / 2, h * 0.28 + 74, 2, '#f4efe2', 'center');
+      text(ctx, b.def.name, w / 2, h * 0.28 + 100, 2, '#ffd24a', 'center', '#140818');
+    }
+    if (game.state === 'down') {
+      const n = game.count || 0;
+      const f = game.players[game.downIndex];
+      text(ctx, n === 0 ? 'DOWN' : String(n), w / 2, bar + 8, 4, '#f4efe2', 'center', '#140818');
+      text(ctx, 'GET UP!', w / 2, bar + 52, 2, '#ffd24a', 'center', '#140818');
+      if (f) {
+        meter(ctx, w / 2 - 90, bar + 80, 180, 12, (f.getUp || 0) / 100, '#14F195', '#123');
+        text(ctx, 'MASH PUNCHES', w / 2, bar + 98, 1, '#f4efe2', 'center');
+      }
+    }
+    if (game.state === 'card') {
+      text(ctx, 'ROUND ' + game.round + ' OVER', w / 2, bar + 8, 2, '#ffd24a', 'center', '#140818');
+      if (game.scores && game.scores.length) {
+        const last = game.scores[game.scores.length - 1];
+        text(ctx, last.a + '  -  ' + last.b, w / 2, bar + 32, 2, '#f4efe2', 'center', '#140818');
+      }
+    }
+    if (game.state === 'fight' && game.mode === 1 && b && b.tell && b.def.rank <= 2) {
+      text(ctx, hintFor(b.tell), w / 2, h - 18, 1, '#fff', 'center', '#140818');
+    }
+    ctx.restore();
+  }
+
+  /* Phone landscape: the canvas element fills the safe viewport. The fight is
+     scaled uniformly around the ring so fighters stay in proportion, and the
+     arena crowd continues into the side space. Menus fit the whole portrait
+     frame inside that full-screen canvas. */
+  function presentLandscape(screen, off, game, fightLike) {
+    const dw = screen.canvas.width;
+    const dh = screen.canvas.height;
+    screen.setTransform(1, 0, 0, 1, 0, 0);
+    screen.imageSmoothingEnabled = true;
+    if (!fightLike) {
+      const s = Math.min(dw / W, dh / H);
+      const bw = Math.round(W * s);
+      const bh = Math.round(H * s);
+      const ox = Math.round((dw - bw) / 2);
+      const oy = Math.round((dh - bh) / 2);
+      fillArenaWings(screen, dw, dh, 0, H);
+      screen.drawImage(off, 0, 0, W, H, ox, oy, bw, bh);
+      PZ.presentRect = { ox: ox, oy: oy, bw: bw, bh: bh };
+      PZ.screenToGame = function (x, y) {
+        return { x: (x - ox) / s, y: (y - oy) / s };
+      };
+      return;
+    }
+    const ry = PZ.VIEW.ringC.rx * Math.sin(PZ.VIEW.elev);
+    const top = Math.max(0, Math.round(PZ.VIEW.ringC.y - ry - 168));
+    const bot = Math.min(H, Math.round(PZ.VIEW.ringC.y + ry + 88));
+    const sy = top;
+    const srcH = Math.max(1, bot - top);
+    let s = dh / srcH;
+    let bw = W * s;
+    let bh = dh;
+    if (bw > dw) {
+      s = dw / W;
+      bw = dw;
+      bh = srcH * s;
+    }
+    const ox = Math.round((dw - bw) / 2);
+    const oy = Math.round((dh - bh) / 2);
+    fillArenaWings(screen, dw, dh, sy, srcH);
+    const destW = Math.round(bw);
+    const destH = Math.round(bh);
+    screen.drawImage(off, 0, sy, W, srcH, ox, oy, destW, destH);
+    /* Soften the join between the centered ring view and the side crowd. */
+    screen.save();
+    screen.globalCompositeOperation = 'destination-out';
+    const fade = Math.min(22, Math.round(destW * 0.05));
+    const leftFade = screen.createLinearGradient(ox, 0, ox + fade, 0);
+    leftFade.addColorStop(0, 'rgba(0,0,0,1)');
+    leftFade.addColorStop(1, 'rgba(0,0,0,0)');
+    screen.fillStyle = leftFade;
+    screen.fillRect(ox, oy, fade, destH);
+    const rightFade = screen.createLinearGradient(ox + destW, 0, ox + destW - fade, 0);
+    rightFade.addColorStop(0, 'rgba(0,0,0,1)');
+    rightFade.addColorStop(1, 'rgba(0,0,0,0)');
+    screen.fillStyle = rightFade;
+    screen.fillRect(ox + destW - fade, oy, fade, destH);
+    screen.restore();
+    PZ.presentRect = { ox: ox, oy: oy, bw: Math.round(bw), bh: Math.round(bh) };
+    PZ.screenToGame = function (x, y) {
+      return { x: (x - ox) / s, y: sy + (y - oy) / s };
+    };
+    screen.imageSmoothingEnabled = false;
+    drawLandscapeChrome(screen, game, dw, dh);
+  }
+
+  PZ.drawFrame = function (game) {
+    const screen = PZ.screenCtx || PZ.ctx;
+    if (!screen) return;
+    PZ.screenCtx = screen;
+    const landscape = document.body.classList.contains('phone-landscape');
+    if (!landscape) {
+      PZ.presentRect = null;
+      PZ.screenToGame = null;
+      paintFrame(screen, game, false);
+      PZ.ctx = screen;
+      return;
+    }
+    const off = offscreenCanvas();
+    const fightLike = game.state === 'fight' || game.state === 'down' || game.state === 'card' || game.state === 'intro';
+    paintFrame(off.getContext('2d'), game, fightLike);
+    presentLandscape(screen, off, game, fightLike);
+    PZ.ctx = screen;
   };
 
   PZ.formatClock = formatClock;
