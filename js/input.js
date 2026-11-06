@@ -21,6 +21,10 @@
     keyEdge: new Set(),
     touchHold: [{}, {}],
     touchEdge: [new Set(), new Set()],
+    stick: [
+      { x: 0, y: 0, on: false, pointerId: null, ox: 0, oy: 0 },
+      { x: 0, y: 0, on: false, pointerId: null, ox: 0, oy: 0 }
+    ],
     prevButtons: [[], []],
     stickPrev: [{ x: 0, y: 0 }, { x: 0, y: 0 }],
     padCount: 0,
@@ -59,6 +63,99 @@
         btn.addEventListener('pointerup', up);
         btn.addEventListener('pointercancel', up);
       });
+      this.bindSticks();
+    },
+
+    /* Floating thumbstick. The base appears where the thumb lands and dragging steers. */
+    bindSticks: function () {
+      const self = this;
+      const maxR = 38;
+      document.querySelectorAll('.stick-zone').forEach(function (zone) {
+        zone.addEventListener('pointerdown', function (e) {
+          if (!document.body.classList.contains('stick-live')) return;
+          const player = Number(zone.getAttribute('data-p'));
+          if (self.stick[player].on) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const s = self.stick[player];
+          s.pointerId = e.pointerId;
+          s.ox = e.clientX;
+          s.oy = e.clientY;
+          s.x = 0;
+          s.y = 0;
+          s.on = true;
+          self.placeStick(player, e.clientX, e.clientY, 0, 0);
+          try { zone.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        });
+      });
+      window.addEventListener('pointermove', function (e) {
+        for (let p = 0; p < 2; p++) {
+          const s = self.stick[p];
+          if (!s.on || s.pointerId !== e.pointerId) continue;
+          e.preventDefault();
+          let dx = e.clientX - s.ox;
+          let dy = e.clientY - s.oy;
+          const mag = Math.hypot(dx, dy);
+          if (mag > maxR) {
+            dx = dx / mag * maxR;
+            dy = dy / mag * maxR;
+          }
+          let mx = dx / maxR;
+          let my = dy / maxR;
+          if (Math.hypot(mx, my) < 0.2) { mx = 0; my = 0; }
+          s.x = mx;
+          s.y = my;
+          self.placeStick(p, s.ox, s.oy, dx, dy);
+        }
+      });
+      const endStick = function (e) {
+        for (let p = 0; p < 2; p++) {
+          const s = self.stick[p];
+          if (!s.on) continue;
+          if (e && s.pointerId !== e.pointerId) continue;
+          self.setStick(p, 0, 0, false);
+        }
+      };
+      window.addEventListener('pointerup', endStick);
+      window.addEventListener('pointercancel', endStick);
+      window.addEventListener('blur', function () { endStick(null); });
+    },
+
+    setStick: function (player, x, y, on) {
+      const s = this.stick[player];
+      if (!s) return;
+      s.x = on ? x : 0;
+      s.y = on ? y : 0;
+      s.on = !!on;
+      if (!on) {
+        s.pointerId = null;
+        this.hideStick(player);
+      }
+    },
+
+    clearSticks: function () {
+      this.setStick(0, 0, 0, false);
+      this.setStick(1, 0, 0, false);
+    },
+
+    placeStick: function (player, ox, oy, dx, dy) {
+      const fit = document.querySelector('.stick-fit');
+      const vis = document.querySelector('.stick-vis[data-p="' + player + '"]');
+      if (!fit || !vis) return;
+      const root = fit.getBoundingClientRect();
+      vis.classList.add('on');
+      vis.style.left = (ox - root.left) + 'px';
+      vis.style.top = (oy - root.top) + 'px';
+      const nub = vis.querySelector('.stick-nub');
+      if (nub) nub.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    },
+
+    hideStick: function (player) {
+      const vis = document.querySelector('.stick-vis[data-p="' + player + '"]');
+      if (!vis) return;
+      vis.classList.remove('on');
+      const nub = vis.querySelector('.stick-nub');
+      if (nub) nub.style.transform = 'translate(0px,0px)';
     },
 
     touchDown: function (player, act) {
@@ -189,8 +286,13 @@
       snap.dodgeR = edge.has('dodgeR');
       snap.duck = !!hold.duck;
       snap.block = !!hold.block;
-      snap.moveX = (hold.moveR ? 1 : 0) - (hold.moveL ? 1 : 0);
-      snap.moveY = (hold.moveD ? 1 : 0) - (hold.moveU ? 1 : 0);
+      if (this.stick[player].on) {
+        snap.moveX = this.stick[player].x;
+        snap.moveY = this.stick[player].y;
+      } else {
+        snap.moveX = (hold.moveR ? 1 : 0) - (hold.moveL ? 1 : 0);
+        snap.moveY = (hold.moveD ? 1 : 0) - (hold.moveU ? 1 : 0);
+      }
       PUNCHES.forEach(function (p) { snap[p] = edge.has(p); });
       snap.up = edge.has('moveU') || edge.has('block');
       snap.down = edge.has('moveD') || edge.has('duck');
